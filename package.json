@@ -1,0 +1,23 @@
+{
+  "name": "comodl-api",
+  "version": "0.0.1",
+  "description": "create REST api from comodl layouts",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha ./test",
+    "watch-tests": "./node_modules/mocha/bin/mocha -w ./test"
+  },
+  "repository": "",
+  "author": "",
+  "license": "BSD",
+  "dependencies": {
+    "i": "0.3.x"
+  },
+  "devDependencies": {
+    "nano": "3.x.x",
+    "mocha": "1.x.x",
+    "chai": "1.x.x",
+    "request": "~2.16.2",
+    "express": "~3.1.0"
+  }
+}

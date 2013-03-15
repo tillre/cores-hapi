@@ -8,10 +8,10 @@ var comodlRoutes = require('../index.js');
 var articleData = require('./article-data.js');
 
 
-describe('comodl-routes', function() {
+describe('comodl-apis', function() {
 
   // create db before tests and destroy afterwards
-  var dbName = 'comodl-routes-test',
+  var dbName = 'comodl-api-test',
       db = nano.use(dbName),
       comodlLoad = require('comodl-load')(db);
 
@@ -61,29 +61,30 @@ describe('comodl-routes', function() {
     });
 
     it('should have the REST routes', function() {
-      expect(routes.articles.get).to.be.a('function');
-      expect(routes.articles.post).to.be.a('function');
-      expect(routes.articles.put).to.be.a('function');
-      expect(routes.articles.delete).to.be.a('function');
+      expect(routes.get['articles']).to.be.a('function');
+      expect(routes.get['articles/:id']).to.be.a('function');
+      expect(routes.post['articles']).to.be.a('function');
+      expect(routes.put['articles']).to.be.a('function');
+      expect(routes.put['articles/:id']).to.be.a('function');
+      expect(routes.delete['articles/:id/:rev']).to.be.a('function');
     });
 
     it('should have the view routes', function() {
     });
 
     it('should provide POST', function(done) {
-      comodl.model.create('Article', articleData, function(err, m) {
-        var req = { body: m };
-        var res = { send: function(result) {
-          expect(result).to.be.a('object');
-          expect(result.ok).to.be.true;
-          expect(result.data.id).to.exist;
+      var m = comodl.model.create('Article', articleData);
+      var req = { body: m };
+      var res = { send: function(result) {
+        expect(result).to.be.a('object');
+        expect(result.ok).to.be.true;
+        expect(result.data.id).to.exist;
 
-          modelId = result.data.id;
-          modelRev = result.data.rev;
-          done();
-        }};
-        routes.articles.post(req, res);
-      });
+        modelId = result.data.id;
+        modelRev = result.data.rev;
+        done();
+      }};
+      routes.post['articles'](req, res);
     });
 
     it('should provide GET', function(done) {
@@ -96,7 +97,7 @@ describe('comodl-routes', function() {
         expect(result.data.rev).to.equal(modelRev);
         done();
       }};
-      routes.articles.get(req, res);
+      routes.get['articles/:id'](req, res);
     });
 
     it('should provide PUT', function(done) {
@@ -115,7 +116,7 @@ describe('comodl-routes', function() {
           modelRev = result.data.rev;
           done();
         }};
-        routes.articles.put(req, res);
+        routes.put['articles'](req, res);
       });
     });
 
@@ -126,53 +127,102 @@ describe('comodl-routes', function() {
         expect(result.ok).to.be.true;
         done();
       }};
-      routes.articles.delete(req, res);
+      routes.delete['articles/:id/:rev'](req, res);
     });
   });
 
 
-  // describe('mount', function() {
+  describe('mount', function() {
 
-  //   var comodl = null;
-  //   var app = require('express')();
-  //   var server = null;
-  //   var port = 3333, origin = 'http://localhost:' + port;
+    var comodl = null;
+    var express = require('express');
+    var port = 3333;
+    var url = 'http://localhost:' + port + '/articles';
+    var app = express();
+    var server = null;
+
+    var modelId = null;
+    var modelRev = null;
+
+    app.use(express.bodyParser());
     
-  //   // load modules and start server
-  //   before(function(done) {
-  //     comodlLoad('./test', function(err, cm) {
-  //       expect(err).to.not.exist;
-  //       expect(cm).to.be.a('object');
-  //       comodl = cm;
-  //       comodlRoutes.mount(comodl, app);
-  //       server = app.listen(port);
-  //       done();
-  //     });
-  //   });
+    // load modules and start server
+    before(function(done) {
+      comodlLoad('./test', function(err, cm) {
+        expect(err).to.not.exist;
+        expect(cm).to.be.a('object');
+        comodl = cm;
+        comodlRoutes.mount(comodl, app);
+        server = app.listen(port);
+        done();
+      });
+    });
 
-  //   after(function() {
-  //     server.close();
-  //   });
+    after(function() {
+      server.close();
+    });
     
-  //   it('should accept GET', function(done) {
-  //     request(origin + '/articles', function(err, res, body) {
-  //       expect(err).to.not.exist;
-  //       var data = JSON.parse(body);
-  //       expect(data).to.be.a('object');
-  //       done();
-  //     });
-  //   });
+    it('should accept POST', function(done) {
+      request.post(
+        { url: url, json: { type: 'Article', data: articleData } },
+        function(err, res, body) {
+          expect(err).to.not.exist;
+          expect(body).to.be.a('object');
+          expect(body.ok).to.be.true;
+          expect(body.data).to.be.a('object');
 
-  //   it('should accept POST', function(done) {
-  //     done();
-  //   });
+          modelId = body.data.id;
+          modelRev = body.data.rev;
+          done();
+        }
+      );
+    });
 
-  //   it('should accept PUT', function(done) {
-  //     done();
-  //   });
+    it('should accept GET', function(done) {
+      request.get(
+        { url: url, json: true },
+        function(err, res, body) {
+          expect(err).to.not.exist;
+          expect(body.ok).to.be.true;
 
-  //   it('should accept DELETE', function(done) {
-  //     done();
-  //   });
-  // });
+          var model = body.data[0];
+          expect(model).to.be.a('object');
+          expect(model.id).to.exist;
+          expect(model.rev).to.exist;
+          expect(model.type).to.equal('Article');
+          done();
+        }
+      );
+    });
+
+    it('should accept PUT', function(done) {
+      request.put(
+        { url: url, json: { type: 'Article', data: articleData } },
+        function(err, res, body) {
+          expect(err).to.not.exist;
+          expect(body.ok).to.be.true;
+
+          var model = body.data;
+          expect(model.id).to.be.a('string');
+          expect(model.rev).to.be.a('string');
+          expect(model.type).to.equal('Article');
+
+          modelRev = model.rev;
+          done();
+        }
+      );
+    });
+
+    it('should accept DELETE', function(done) {
+      var u = url + '/' + modelId + '/' + modelRev;
+      request.del(
+        { url: u, json: true },
+        function(err, res, body) {
+          expect(err).to.not.exist;
+          expect(body.ok).to.be.true;
+          done();
+        }
+      );
+    });
+  });
 });

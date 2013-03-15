@@ -12,64 +12,76 @@ function ok(isOk, payload) {
 }
 
 
+
+
 function create(comodl) {
-  var routes = {};
+  var routes = {
+    get: {},
+    post: {},
+    put: {},
+    delete: {}
+  };
 
   Object.keys(comodl.layouts).forEach(function(name) {
     var layout = comodl.layouts[name];
-
-    var methods = {
-
-      get: function(req, res) {
-        var id = req.params.id;
-        if (!id) {
-          res.send('TODO: provide all models');
-        }
-        else {
-          comodl.model.load(id, function(err, model) {
-            if (err) res.send(ok(false, err));
-            else res.send(ok(true, model));
-          });
-        }
-      },
-      
-      post: function(req, res) {
-        var model = req.body;
-        comodl.model.save(model, function(err, model) {
-            if (err) res.send(ok(false, err));
-            else res.send(ok(true, model));
-        });
-      },
-
-      put: function(req, res) {
-        var model = req.body;
-        comodl.model.save(model, function(err, model) {
-          if (err) res.send(ok(false, err));
-          else res.send(ok(true, model));
-        });
-      },
-
-      delete: function(req, res) {
-        var id = req.params.id;
-        var rev = req.params.rev;
-        comodl.model.destroy(id, rev, function(err) {
-          if (err) res.send(ok(false, err));
-          else res.send(ok(true));
-        });
-      }
-    };
+    var route = i.pluralize(name.toLowerCase());
     
-    routes[i.pluralize(name.toLowerCase())] = methods;
+    // GET
+    routes.get[route] = function(req, res) {
+      comodl.view(name, 'all', function(err, docs) {
+        if (err) res.send(ok(false, err));
+        else     res.send(ok(true, docs));
+      });
+    };
+    routes.get[route + '/:id'] = function(req, res) {
+      comodl.model.load(req.params.id, function(err, model) {
+        if (err) res.send(ok(false, err));
+        else     res.send(ok(true, model));
+      });
+    };
+
+    // POST
+    routes.post[route] = function(req, res) {
+      comodl.model.save(req.body, function(err, model) {
+        if (err) res.send(ok(false, err));
+        else     res.send(ok(true, model));
+      });
+    };
+
+    // PUT
+    routes.put[route] = function(req, res) {
+      comodl.model.save(req.body, function(err, model) {
+        if (err) res.send(ok(false, err));
+        else     res.send(ok(true, model));
+      });
+    };
+    routes.put[route + '/:id'] = function(req, res) {
+      var m = comodl.modelcreate(req.params.body);
+      m.id = req.params.id;
+      comodl.model.save(req.body, function(err, model) {
+        if (err) res.send(ok(false, err));
+        else     res.send(ok(true, model));
+      });
+    };
+      
+    // DELETE
+    routes.delete[route + '/:id/:rev'] = function(req, res) {
+      comodl.model.destroy(req.params.id, req.params.rev, function(err) {
+        if (err) res.send(ok(false, err));
+        else     res.send(ok(true));
+      });
+    };
   });
+
   return routes;
 }
 
 
 function mount(comodl, app) {
   var routes = create(comodl);
-  Object.keys(routes).forEach(function(route) {
-    Object.keys(routes[name]).forEach(function(method) {
-      app[method]('/' + route, routes[name][method]);
+  Object.keys(routes).forEach(function(method) {
+    Object.keys(routes[method]).forEach(function(route) {
+      app[method]('/' + route, routes[method][route]);
     });
   });
 }

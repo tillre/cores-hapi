@@ -45,6 +45,7 @@ describe('comodl-apis', function() {
     // load modules
     before(function(done) {
       comodlLoad('./test', function(err, cm) {
+        expect(err).to.not.exist;
         expect(cm).to.be.a('object');
         comodl = cm;
         done();
@@ -52,8 +53,8 @@ describe('comodl-apis', function() {
     });
 
     var routes = null,
-        modelId = null,
-        modelRev = null;
+        docId = null,
+        docRev = null;
 
     it('should create the routes', function() {
       routes = comodlRoutes.create(comodl);
@@ -78,42 +79,42 @@ describe('comodl-apis', function() {
       var res = { send: function(result) {
         expect(result).to.be.a('object');
         expect(result.ok).to.be.true;
-        expect(result.data.id).to.exist;
+        expect(result.data._id).to.exist;
 
-        modelId = result.data.id;
-        modelRev = result.data.rev;
+        docId = result.data._id;
+        docRev = result.data._rev;
         done();
       }};
       routes.post['articles'](req, res);
     });
 
     it('should provide GET', function(done) {
-      var req = { params: { id: modelId } };
+      var req = { params: { id: docId } };
       var res = { send: function(result) {
         expect(result).to.be.a('object');
         expect(result.ok).to.be.true;
-        expect(result.data.id).to.exist;
-        expect(result.data.id).to.equal(modelId);
-        expect(result.data.rev).to.equal(modelRev);
+        expect(result.data._id).to.exist;
+        expect(result.data._id).to.equal(docId);
+        expect(result.data._rev).to.equal(docRev);
         done();
       }};
       routes.get['articles/:id'](req, res);
     });
 
     it('should provide PUT', function(done) {
-      comodl.model.load(modelId, function(err, m) {
+      comodl.model.load(docId, function(err, m) {
         expect(err).to.not.exist;
-        expect(m.id).to.equal(modelId);
+        expect(m._id).to.equal(docId);
         
         m.title = 'Just Another Title';
         var req = { body: m };
         var res = { send: function(result) {
           expect(result).to.exist;
           expect(result.ok).to.be.true;
-          expect(result.data.id).to.equal(modelId);
-          expect(result.data.rev).to.not.equal(modelRev);
+          expect(result.data._id).to.equal(docId);
+          expect(result.data._rev).to.not.equal(docRev);
 
-          modelRev = result.data.rev;
+          docRev = result.data._rev;
           done();
         }};
         routes.put['articles'](req, res);
@@ -121,7 +122,7 @@ describe('comodl-apis', function() {
     });
 
     it('should provide DELETE', function(done) {
-      var req = { params: { id: modelId, rev: modelRev } };
+      var req = { params: { id: docId, rev: docRev } };
       var res = { send: function(result) {
         expect(result).to.exist;
         expect(result.ok).to.be.true;
@@ -141,8 +142,8 @@ describe('comodl-apis', function() {
     var app = express();
     var server = null;
 
-    var modelId = null;
-    var modelRev = null;
+    var docId = null;
+    var docRev = null;
 
     app.use(express.bodyParser());
     
@@ -169,10 +170,9 @@ describe('comodl-apis', function() {
           expect(err).to.not.exist;
           expect(body).to.be.a('object');
           expect(body.ok).to.be.true;
-          expect(body.data).to.be.a('object');
 
-          modelId = body.data.id;
-          modelRev = body.data.rev;
+          docId = body.data._id;
+          docRev = body.data._rev;
           done();
         }
       );
@@ -185,11 +185,11 @@ describe('comodl-apis', function() {
           expect(err).to.not.exist;
           expect(body.ok).to.be.true;
 
-          var model = body.data[0];
-          expect(model).to.be.a('object');
-          expect(model.id).to.exist;
-          expect(model.rev).to.exist;
-          expect(model.type).to.equal('Article');
+          var doc = body.data[0];
+          expect(doc).to.be.a('object');
+          expect(doc._id).to.exist;
+          expect(doc._rev).to.exist;
+          expect(doc.type).to.equal('Article');
           done();
         }
       );
@@ -202,19 +202,19 @@ describe('comodl-apis', function() {
           expect(err).to.not.exist;
           expect(body.ok).to.be.true;
 
-          var model = body.data;
-          expect(model.id).to.be.a('string');
-          expect(model.rev).to.be.a('string');
-          expect(model.type).to.equal('Article');
+          var doc = body.data;
+          expect(doc._id).to.be.a('string');
+          expect(doc._rev).to.be.a('string');
+          expect(doc.type).to.equal('Article');
 
-          modelRev = model.rev;
+          docRev = doc._rev;
           done();
         }
       );
     });
 
     it('should accept DELETE', function(done) {
-      var u = url + '/' + modelId + '/' + modelRev;
+      var u = url + '/' + docId + '/' + docRev;
       request.del(
         { url: u, json: true },
         function(err, res, body) {

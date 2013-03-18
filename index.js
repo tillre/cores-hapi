@@ -34,33 +34,33 @@ function create(comodl) {
       });
     };
     routes.get[route + '/:id'] = function(req, res) {
-      comodl.model.load(req.params.id, function(err, model) {
+      comodl.model.load(req.params.id, function(err, doc) {
         if (err) res.send(ok(false, err));
-        else     res.send(ok(true, model));
+        else     res.send(ok(true, doc));
       });
     };
 
     // POST
     routes.post[route] = function(req, res) {
-      comodl.model.save(req.body, function(err, model) {
+      comodl.model.save(req.body, function(err, doc) {
         if (err) res.send(ok(false, err));
-        else     res.send(ok(true, model));
+        else     res.send(ok(true, doc));
       });
     };
 
     // PUT
     routes.put[route] = function(req, res) {
-      comodl.model.save(req.body, function(err, model) {
+      comodl.model.save(req.body, function(err, doc) {
         if (err) res.send(ok(false, err));
-        else     res.send(ok(true, model));
+        else     res.send(ok(true, doc));
       });
     };
     routes.put[route + '/:id'] = function(req, res) {
       var m = comodl.modelcreate(req.params.body);
       m.id = req.params.id;
-      comodl.model.save(req.body, function(err, model) {
+      comodl.model.save(req.body, function(err, doc) {
         if (err) res.send(ok(false, err));
-        else     res.send(ok(true, model));
+        else     res.send(ok(true, doc));
       });
     };
       

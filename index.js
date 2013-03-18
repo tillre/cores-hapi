@@ -12,8 +12,6 @@ function ok(isOk, payload) {
 }
 
 
-
-
 function create(comodl) {
   var routes = {
     get: {},
@@ -40,6 +38,17 @@ function create(comodl) {
       });
     };
 
+    // GET views
+    Object.keys(layout.design.views).forEach(function(viewName) {
+      var viewRoute = name.toLowerCase() + '-' + viewName.toLowerCase();
+      routes.get[viewRoute] = function(req, res) {
+        comodl.view(name, viewName, function(err, docs) {
+          if (err) res.send(ok(false, err));
+          else     res.send(ok(true, docs));
+        });
+      };
+    });
+
     // POST
     routes.post[route] = function(req, res) {
       comodl.model.save(req.body, function(err, doc) {
@@ -56,7 +65,7 @@ function create(comodl) {
       });
     };
     routes.put[route + '/:id'] = function(req, res) {
-      var m = comodl.modelcreate(req.params.body);
+      var m = comodl.model.create(req.params.body);
       m.id = req.params.id;
       comodl.model.save(req.body, function(err, doc) {
         if (err) res.send(ok(false, err));
@@ -71,7 +80,9 @@ function create(comodl) {
         else     res.send(ok(true));
       });
     };
+
   });
+
 
   return routes;
 }

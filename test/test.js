@@ -130,6 +130,16 @@ describe('comodl-apis', function() {
       }};
       routes.delete['articles/:id/:rev'](req, res);
     });
+
+    it('should provide the views', function(done) {
+      var req = {};
+      var res = { send: function(result) {
+        expect(result).to.exist;
+        expect(result.ok).to.be.true;
+        done();
+      }};
+      routes.get['article-titles'](req, res);
+    });
   });
 
 
@@ -139,6 +149,7 @@ describe('comodl-apis', function() {
     var express = require('express');
     var port = 3333;
     var url = 'http://localhost:' + port + '/articles';
+    var viewUrl = 'http://localhost:' + port + '/article-titles';
     var app = express();
     var server = null;
 
@@ -163,9 +174,10 @@ describe('comodl-apis', function() {
       server.close();
     });
     
-    it('should accept POST', function(done) {
+    it('should POST', function(done) {
+      var doc = comodl.model.create('Article', articleData);
       request.post(
-        { url: url, json: { type: 'Article', data: articleData } },
+        { url: url, json: doc },
         function(err, res, body) {
           expect(err).to.not.exist;
           expect(body).to.be.a('object');
@@ -178,7 +190,7 @@ describe('comodl-apis', function() {
       );
     });
 
-    it('should accept GET', function(done) {
+    it('should GET', function(done) {
       request.get(
         { url: url, json: true },
         function(err, res, body) {
@@ -195,9 +207,24 @@ describe('comodl-apis', function() {
       );
     });
 
-    it('should accept PUT', function(done) {
+    it('should GET the view', function(done) {
+      request.get(
+        { url: viewUrl, json: true },
+        function(err, res, body) {
+          expect(err).to.not.exist;
+          expect(body.ok).to.be.true;
+          expect(body.data).to.be.a('array');
+          expect(body.data.length).to.equal(1);
+          expect(body.data[0]).to.be.a('string');
+          done();
+        }
+      );
+    });
+
+    it('should PUT', function(done) {
+      var doc = comodl.model.create('Article', articleData);
       request.put(
-        { url: url, json: { type: 'Article', data: articleData } },
+        { url: url, json: doc },
         function(err, res, body) {
           expect(err).to.not.exist;
           expect(body.ok).to.be.true;
@@ -207,13 +234,32 @@ describe('comodl-apis', function() {
           expect(doc._rev).to.be.a('string');
           expect(doc.type).to.equal('Article');
 
-          docRev = doc._rev;
           done();
         }
       );
     });
 
-    it('should accept DELETE', function(done) {
+    it('should PUT with id', function(done) {
+      var doc = comodl.model.create('Article', articleData);
+      doc._id = docId;
+      doc._rev = docRev;
+      request.put(
+        { url: url + '/' + docId, json: doc },
+        function(err, res, body) {
+          expect(err).to.not.exist;
+          expect(body.ok).to.be.true;
+
+          var d = body.data;
+          expect(d._id).to.equal(doc._id);
+          expect(d._rev).to.not.equal(doc._rev);
+
+          docRev = d._rev;
+          done();
+        }
+      );
+    });
+
+    it('should DELETE', function(done) {
       var u = url + '/' + docId + '/' + docRev;
       request.del(
         { url: u, json: true },

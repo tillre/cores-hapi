@@ -9,9 +9,9 @@ module.exports = {
         }
       },
       layout: function(cm, result, cb) {
-        return result.rows.map(function(doc) {
+        cb(null, result.rows.map(function(doc) {
           return doc.value;
-        });
+        }));
       }
     }
   }

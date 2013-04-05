@@ -38,221 +38,89 @@ describe('comodl-apis', function() {
     nano.db.destroy(dbName, done);
   });
 
-
-  describe('routes', function() {
-    var comodl = null;
-
-    // load modules
-    before(function(done) {
-      comodlLoad('./test', function(err, cm) {
-        expect(err).to.not.exist;
-        expect(cm).to.be.a('object');
-        comodl = cm;
-        done();
-      });
-    });
-
-    var routes = null,
-        docId = null,
-        docRev = null;
-
-    it('should create the routes', function() {
-      routes = comodlRoutes.create(comodl);
-      expect(routes).to.exist;
-    });
-
-    it('should have the REST routes', function() {
-      expect(routes.get['articles']).to.be.a('function');
-      expect(routes.get['articles/:id']).to.be.a('function');
-      expect(routes.post['articles']).to.be.a('function');
-      expect(routes.put['articles']).to.be.a('function');
-      expect(routes.put['articles/:id']).to.be.a('function');
-      expect(routes.delete['articles/:id/:rev']).to.be.a('function');
-    });
-
-    it('should have the view routes', function() {
-    });
-
-    it('should provide POST', function(done) {
-      var m = comodl.model.create('Article', articleData);
-      var req = { body: m };
-      var res = { send: function(result) {
-        expect(result).to.be.a('object');
-        expect(result.ok).to.be.true;
-        expect(result.data._id).to.exist;
-
-        docId = result.data._id;
-        docRev = result.data._rev;
-        done();
-      }};
-      routes.post['articles'](req, res);
-    });
-
-    it('should provide GET', function(done) {
-      var req = { params: { id: docId } };
-      var res = { send: function(result) {
-        expect(result).to.be.a('object');
-        expect(result.ok).to.be.true;
-        expect(result.data._id).to.exist;
-        expect(result.data._id).to.equal(docId);
-        expect(result.data._rev).to.equal(docRev);
-        done();
-      }};
-      routes.get['articles/:id'](req, res);
-    });
-
-    it('should provide PUT', function(done) {
-      comodl.model.load(docId, function(err, m) {
-        expect(err).to.not.exist;
-        expect(m._id).to.equal(docId);
-        
-        m.title = 'Just Another Title';
-        var req = { body: m };
-        var res = { send: function(result) {
-          expect(result).to.exist;
-          expect(result.ok).to.be.true;
-          expect(result.data._id).to.equal(docId);
-          expect(result.data._rev).to.not.equal(docRev);
-
-          docRev = result.data._rev;
-          done();
-        }};
-        routes.put['articles'](req, res);
-      });
-    });
-
-    it('should provide DELETE', function(done) {
-      var req = { params: { id: docId, rev: docRev } };
-      var res = { send: function(result) {
-        expect(result).to.exist;
-        expect(result.ok).to.be.true;
-        done();
-      }};
-      routes.delete['articles/:id/:rev'](req, res);
-    });
-
-    it('should provide the views', function(done) {
-      var req = {};
-      var res = { send: function(result) {
-        expect(result).to.exist;
-        expect(result.ok).to.be.true;
-        done();
-      }};
-      routes.get['article-titles'](req, res);
-    });
-  });
-
-
   describe('mount', function() {
 
     var comodl = null;
-    var express = require('express');
-    var port = 3333;
-    var url = 'http://localhost:' + port + '/articles';
-    var viewUrl = 'http://localhost:' + port + '/article-titles';
-    var app = express();
-    var server = null;
+
+    var route = '/articles';
+    var viewRoute = '/article-titles';
+
+    var server = new (require('hapi').Server)('0.0.0.0', 3333);
 
     var docId = null;
     var docRev = null;
 
-    app.use(express.bodyParser());
-    
-    // load modules and start server
+    // load modules and mount routes
     before(function(done) {
       comodlLoad('./test', function(err, cm) {
         expect(err).to.not.exist;
         expect(cm).to.be.a('object');
         comodl = cm;
-        comodlRoutes.mount(comodl, app);
-        server = app.listen(port);
+        comodlRoutes.mount(comodl, server);
         done();
       });
     });
 
-    after(function() {
-      server.close();
-    });
-    
     it('should POST', function(done) {
-      var doc = comodl.model.create('Article', articleData);
-      request.post(
-        { url: url, json: doc },
-        function(err, res, body) {
-          expect(err).to.not.exist;
-          expect(body).to.be.a('object');
-          expect(body.ok).to.be.true;
+      var doc = comodl.model.create(articleData);
+      server.inject(
+        { method: 'POST', url: route, payload: JSON.stringify(doc) },
+        function(res) {
+          expect(res.result.ok).to.be.true;
 
-          docId = body.data._id;
-          docRev = body.data._rev;
+          docId = res.result.data._id;
+          docRev = res.result.data._rev;
           done();
         }
       );
     });
 
     it('should GET', function(done) {
-      request.get(
-        { url: url, json: true },
-        function(err, res, body) {
-          expect(err).to.not.exist;
-          expect(body.ok).to.be.true;
-
-          var doc = body.data[0];
-          expect(doc).to.be.a('object');
-          expect(doc._id).to.exist;
-          expect(doc._rev).to.exist;
-          expect(doc.type).to.equal('Article');
+      server.inject(
+        { method: 'GET', url: route + '/' + docId },
+        function(res) {
+          expect(res.result.ok).to.be.true;
+          expect(res.result.data._id).to.equal(docId);
+          expect(res.result.data._rev).to.equal(docRev);
           done();
         }
       );
     });
 
     it('should GET the view', function(done) {
-      request.get(
-        { url: viewUrl, json: true },
-        function(err, res, body) {
-          expect(err).to.not.exist;
-          expect(body.ok).to.be.true;
-          expect(body.data).to.be.a('array');
-          expect(body.data.length).to.equal(1);
-          expect(body.data[0]).to.be.a('string');
+      server.inject(
+        { method: 'GET', url: viewRoute },
+        function(res) {
+          expect(res.result.ok).to.be.true;
+          expect(res.result.data.length).to.equal(1);
           done();
         }
       );
     });
-
+    
     it('should PUT', function(done) {
-      var doc = comodl.model.create('Article', articleData);
-      request.put(
-        { url: url, json: doc },
-        function(err, res, body) {
-          expect(err).to.not.exist;
-          expect(body.ok).to.be.true;
-
-          var doc = body.data;
-          expect(doc._id).to.be.a('string');
-          expect(doc._rev).to.be.a('string');
-          expect(doc.type).to.equal('Article');
-
+      var doc = comodl.model.create(articleData);
+      server.inject(
+        { method: 'PUT', url: route + '/' + docId + '?rev=' + docRev, payload: JSON.stringify(doc) },
+        function(res) {
+          expect(res.result.ok).to.be.true;
+          var d = res.result.data;
+          expect(d._id).to.equal(docId);
+          expect(d._rev).to.not.equal(docRev);
+          docRev = d._rev;
           done();
         }
       );
     });
 
-    it('should PUT with id', function(done) {
-      var doc = comodl.model.create('Article', articleData);
-      doc._id = docId;
-      doc._rev = docRev;
-      request.put(
-        { url: url + '/' + docId, json: doc },
-        function(err, res, body) {
-          expect(err).to.not.exist;
-          expect(body.ok).to.be.true;
-
-          var d = body.data;
-          expect(d._id).to.equal(doc._id);
-          expect(d._rev).to.not.equal(doc._rev);
-
+    it('should PUT without type attribute', function(done) {
+      server.inject(
+        { method: 'PUT', url: route + '/' + docId + '?rev=' + docRev, payload: JSON.stringify(articleData) },
+        function(res) {
+          expect(res.result.ok).to.be.true;
+          var d = res.result.data;
+          expect(d._id).to.equal(docId);
+          expect(d._rev).to.not.equal(docRev);
           docRev = d._rev;
           done();
         }
@@ -260,12 +128,10 @@ describe('comodl-apis', function() {
     });
 
     it('should DELETE', function(done) {
-      var u = url + '/' + docId + '/' + docRev;
-      request.del(
-        { url: u, json: true },
-        function(err, res, body) {
-          expect(err).to.not.exist;
-          expect(body.ok).to.be.true;
+      server.inject(
+        { method: 'DELETE', url: route + '/' + docId + '?rev=' + docRev},
+        function(res) {
+          expect(res.result.ok).to.be.true;
           done();
         }
       );

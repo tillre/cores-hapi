@@ -1,7 +1,7 @@
 {
-  "name": "comodl-api",
+  "name": "comodl-hapi",
   "version": "0.0.1",
-  "description": "create REST api from comodl layouts",
+  "description": "create hapi REST api from comodl",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha ./test",
@@ -17,7 +17,6 @@
     "nano": "3.x.x",
     "mocha": "1.x.x",
     "chai": "1.x.x",
-    "request": "~2.16.2",
-    "express": "~3.1.0"
+    "hapi": "~0.15.6"
   }
 }

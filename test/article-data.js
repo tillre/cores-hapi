@@ -1,5 +1,7 @@
 module.exports = {
 
+  type: 'Article',
+  
   title: 'Some Article',
   author: {
     firstname: 'Balou',

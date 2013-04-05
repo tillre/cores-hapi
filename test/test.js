@@ -66,10 +66,10 @@ describe('comodl-apis', function() {
       server.inject(
         { method: 'POST', url: route, payload: JSON.stringify(doc) },
         function(res) {
-          expect(res.result.ok).to.be.true;
+          expect(res.statusCode).to.equal(200);
 
-          docId = res.result.data._id;
-          docRev = res.result.data._rev;
+          docId = res.result._id;
+          docRev = res.result._rev;
           done();
         }
       );
@@ -79,9 +79,20 @@ describe('comodl-apis', function() {
       server.inject(
         { method: 'GET', url: route + '/' + docId },
         function(res) {
-          expect(res.result.ok).to.be.true;
-          expect(res.result.data._id).to.equal(docId);
-          expect(res.result.data._rev).to.equal(docRev);
+          expect(res.statusCode).to.equal(200);
+          expect(res.result._id).to.equal(docId);
+          expect(res.result._rev).to.equal(docRev);
+          done();
+        }
+      );
+    });
+
+    it('should not GET nonexistant', function(done) {
+      server.inject(
+        { method: 'GET', url: route + '/asdasd'},
+        function(res) {
+          // console.log('response', res);
+          expect(res.statusCode).to.equal(404);
           done();
         }
       );
@@ -91,8 +102,8 @@ describe('comodl-apis', function() {
       server.inject(
         { method: 'GET', url: viewRoute },
         function(res) {
-          expect(res.result.ok).to.be.true;
-          expect(res.result.data.length).to.equal(1);
+          expect(res.statusCode).to.equal(200);
+          expect(res.result.length).to.equal(1);
           done();
         }
       );
@@ -103,8 +114,9 @@ describe('comodl-apis', function() {
       server.inject(
         { method: 'PUT', url: route + '/' + docId + '?rev=' + docRev, payload: JSON.stringify(doc) },
         function(res) {
-          expect(res.result.ok).to.be.true;
-          var d = res.result.data;
+          expect(res.statusCode).to.equal(200);
+          
+          var d = res.result;
           expect(d._id).to.equal(docId);
           expect(d._rev).to.not.equal(docRev);
           docRev = d._rev;
@@ -117,8 +129,9 @@ describe('comodl-apis', function() {
       server.inject(
         { method: 'PUT', url: route + '/' + docId + '?rev=' + docRev, payload: JSON.stringify(articleData) },
         function(res) {
-          expect(res.result.ok).to.be.true;
-          var d = res.result.data;
+          expect(res.statusCode).to.equal(200);
+          
+          var d = res.result;
           expect(d._id).to.equal(docId);
           expect(d._rev).to.not.equal(docRev);
           docRev = d._rev;
@@ -131,7 +144,17 @@ describe('comodl-apis', function() {
       server.inject(
         { method: 'DELETE', url: route + '/' + docId + '?rev=' + docRev},
         function(res) {
-          expect(res.result.ok).to.be.true;
+          expect(res.statusCode).to.equal(200);
+          done();
+        }
+      );
+    });
+
+    it('should not DELETE nonexistant', function(done) {
+      server.inject(
+        { method: 'DELETE', url: route + '/' + docId + '?rev=' + docRev},
+        function(res) {
+          expect(res.statusCode).to.equal(404);
           done();
         }
       );

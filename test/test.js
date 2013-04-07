@@ -3,7 +3,7 @@
 var expect = require('chai').expect;
 var nano = require('nano')('http://localhost:5984');
 var request = require('request');
-var comodlRoutes = require('../index.js');
+var comodlApi = require('../index.js');
 
 var articleData = require('./article-data.js');
 
@@ -56,7 +56,7 @@ describe('comodl-apis', function() {
         expect(err).to.not.exist;
         expect(cm).to.be.a('object');
         comodl = cm;
-        comodlRoutes.mount(comodl, server);
+        comodlApi(comodl, server);
         done();
       });
     });
@@ -91,7 +91,6 @@ describe('comodl-apis', function() {
       server.inject(
         { method: 'GET', url: route + '/asdasd'},
         function(res) {
-          // console.log('response', res);
           expect(res.statusCode).to.equal(404);
           done();
         }

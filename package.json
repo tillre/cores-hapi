@@ -11,7 +11,7 @@
   "author": "",
   "license": "BSD",
   "dependencies": {
-    "i": "0.3.x"
+    "underscore": "~1.4.4"
   },
   "devDependencies": {
     "nano": "3.x.x",

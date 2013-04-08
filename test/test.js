@@ -11,7 +11,7 @@ var articleData = require('./article-data.js');
 describe('comodl-apis', function() {
 
   // create db before tests and destroy afterwards
-  var dbName = 'comodl-api-test',
+  var dbName = 'test-comodl-api',
       db = nano.use(dbName),
       comodlLoad = require('comodl-load');
 

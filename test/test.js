@@ -13,7 +13,7 @@ describe('comodl-apis', function() {
   // create db before tests and destroy afterwards
   var dbName = 'comodl-api-test',
       db = nano.use(dbName),
-      comodlLoad = require('comodl-load')(db);
+      comodlLoad = require('comodl-load');
 
   
   before(function(done) {
@@ -52,7 +52,7 @@ describe('comodl-apis', function() {
 
     // load modules and mount routes
     before(function(done) {
-      comodlLoad('./test', function(err, cm) {
+      comodlLoad(db, './test', function(err, cm) {
         expect(err).to.not.exist;
         expect(cm).to.be.a('object');
         comodl = cm;

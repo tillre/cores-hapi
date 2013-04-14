@@ -62,6 +62,22 @@ describe('comodl-apis', function() {
       });
     });
 
+    it('should GET the index', function(done) {
+      server.inject(
+        { method: 'GET', url: '/_index' },
+        function(res) {
+          expect(res.statusCode).to.equal(200);
+          expect(res.result.Article).to.be.a('object');
+          expect(res.result.Article.path).to.be.a('string');
+          expect(res.result.Article.views).to.be.a('object');
+          expect(res.result.Article.views.all).to.be.a('string');
+          expect(res.result.Article.schema).to.be.a('string');
+          expect(res.result.Image).to.be.a('object');
+          done();
+        }
+      );
+    });
+    
     it('should GET the schema', function(done) {
       server.inject(
         { method: 'GET', url: schemaRoute },

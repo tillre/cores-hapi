@@ -12,14 +12,24 @@ function updateErrorCode(err) {
 
 module.exports = function mountRoutes(comodl, server) {
 
+  // object listing all model routes
+  var index = {};
+  
   _.each(comodl.layouts, function(layout, name) {
 
     var path = '/' + i.pluralize(layout.name.toLowerCase());
 
+    // index entry
+    var info = index[name] = {
+      path: path,
+      schema: path + '/_schema',
+      views: {}
+    };
+    
     // GET schema
     server.route({
       method: 'GET',
-      path: path + '/_schema',
+      path: info.schema,
       handler: function(req) {
         req.reply(layout.design.schema);
       }
@@ -28,7 +38,7 @@ module.exports = function mountRoutes(comodl, server) {
     // GET all
     server.route({
       method: 'GET',
-      path: path,
+      path: info.path,
       handler: function(req) {
         comodl.view(name, 'all', function(err, docs) {
           if (err) req.reply(updateErrorCode(err));
@@ -40,7 +50,7 @@ module.exports = function mountRoutes(comodl, server) {
     // GET by id
     server.route({
       method: 'GET',
-      path: path + '/{id}',
+      path: info.path + '/{id}',
       handler: function(req) {
         comodl.model.load(req.params.id, function(err, doc) {
           if (err) req.reply(updateErrorCode(err));
@@ -51,7 +61,7 @@ module.exports = function mountRoutes(comodl, server) {
 
     // GET views
     _.each(layout.design.views, function(view, viewName) {
-      var viewPath = path + '/_views/' + viewName;
+      var viewPath = info.views[viewName] = info.path + '/_views/' + viewName;
       if (!viewPath) {
         return;
       }
@@ -71,7 +81,7 @@ module.exports = function mountRoutes(comodl, server) {
     // POST
     server.route({
       method: 'POST',
-      path: path,
+      path: info.path,
       handler: function(req) {
         var doc = req.payload;
         // enforce type
@@ -88,7 +98,7 @@ module.exports = function mountRoutes(comodl, server) {
     // PUT id
     server.route({
       method: 'PUT',
-      path: path + '/{id}',
+      path: info.path + '/{id}',
       config: {
         handler: function(req) {
           var doc = req.payload;
@@ -109,7 +119,7 @@ module.exports = function mountRoutes(comodl, server) {
     // DELETE
     server.route({
       method: 'DELETE',
-      path: path + '/{id}',
+      path: info.path + '/{id}',
       handler: function(req) {
         var rev = req.query.rev;
         comodl.model.destroy(req.params.id, rev, function(err) {
@@ -120,6 +130,15 @@ module.exports = function mountRoutes(comodl, server) {
     });
   });
 
+  // GET models/route index
+  server.route({
+    method: 'GET',
+    path: '/_index',
+    handler: function(req) {
+      req.reply(index);
+    }
+  });
+  
 };
 
 

@@ -1,5 +1,5 @@
 var _ = require('underscore');
-
+var i = require('i')();
 
 
 function updateErrorCode(err) {
@@ -14,10 +14,21 @@ module.exports = function mountRoutes(comodl, server) {
 
   _.each(comodl.layouts, function(layout, name) {
 
+    var path = '/' + i.pluralize(layout.name.toLowerCase());
+
+    // GET schema
+    server.route({
+      method: 'GET',
+      path: path + '/_schema',
+      handler: function(req) {
+        req.reply(layout.design.schema);
+      }
+    });
+    
     // GET all
     server.route({
       method: 'GET',
-      path: layout.path,
+      path: path,
       handler: function(req) {
         comodl.view(name, 'all', function(err, docs) {
           if (err) req.reply(updateErrorCode(err));
@@ -29,7 +40,7 @@ module.exports = function mountRoutes(comodl, server) {
     // GET by id
     server.route({
       method: 'GET',
-      path: layout.path + '/{id}',
+      path: path + '/{id}',
       handler: function(req) {
         comodl.model.load(req.params.id, function(err, doc) {
           if (err) req.reply(updateErrorCode(err));
@@ -40,7 +51,7 @@ module.exports = function mountRoutes(comodl, server) {
 
     // GET views
     _.each(layout.design.views, function(view, viewName) {
-      var viewPath = layout.viewPaths[viewName];
+      var viewPath = path + '/_views/' + viewName;
       if (!viewPath) {
         return;
       }
@@ -60,7 +71,7 @@ module.exports = function mountRoutes(comodl, server) {
     // POST
     server.route({
       method: 'POST',
-      path: layout.path,
+      path: path,
       handler: function(req) {
         var doc = req.payload;
         // enforce type
@@ -77,7 +88,7 @@ module.exports = function mountRoutes(comodl, server) {
     // PUT id
     server.route({
       method: 'PUT',
-      path: layout.path + '/{id}',
+      path: path + '/{id}',
       config: {
         handler: function(req) {
           var doc = req.payload;
@@ -98,7 +109,7 @@ module.exports = function mountRoutes(comodl, server) {
     // DELETE
     server.route({
       method: 'DELETE',
-      path: layout.path + '/{id}',
+      path: path + '/{id}',
       handler: function(req) {
         var rev = req.query.rev;
         comodl.model.destroy(req.params.id, rev, function(err) {

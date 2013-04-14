@@ -43,7 +43,8 @@ describe('comodl-apis', function() {
     var comodl = null;
 
     var route = '/articles';
-    var viewRoute = '/article-titles';
+    var schemaRoute = '/articles/_schema';
+    var viewRoute = '/articles/_views/titles';
 
     var server = new (require('hapi').Server)('0.0.0.0', 3333);
 
@@ -61,6 +62,17 @@ describe('comodl-apis', function() {
       });
     });
 
+    it('should GET the schema', function(done) {
+      server.inject(
+        { method: 'GET', url: schemaRoute },
+        function(res) {
+          expect(res.statusCode).to.equal(200);
+          expect(res.result.name).to.equal('Article');
+          done();
+        }
+      );
+    });
+    
     it('should POST', function(done) {
       var doc = comodl.model.create(articleData);
       server.inject(

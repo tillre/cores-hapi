@@ -25,6 +25,7 @@ module.exports = function mountRoutes(comodl, server) {
       schema: path + '/_schema',
       views: {}
     };
+
     
     // GET schema
     server.route({
@@ -34,6 +35,7 @@ module.exports = function mountRoutes(comodl, server) {
         req.reply(layout.design.schema);
       }
     });
+
     
     // GET all
     server.route({
@@ -47,6 +49,7 @@ module.exports = function mountRoutes(comodl, server) {
       }
     });
 
+    
     // GET by id
     server.route({
       method: 'GET',
@@ -59,6 +62,7 @@ module.exports = function mountRoutes(comodl, server) {
       }
     });
 
+    
     // GET views
     _.each(layout.design.views, function(view, viewName) {
       var viewPath = info.views[viewName] = info.path + '/_views/' + viewName;
@@ -83,11 +87,29 @@ module.exports = function mountRoutes(comodl, server) {
       method: 'POST',
       path: info.path,
       handler: function(req) {
-        var doc = req.payload;
+        var doc;
+        var contentType = req.raw.req.headers['content-type'];
+
+        if (contentType && contentType.indexOf('multipart/form-data') !== -1) {
+          // expect payload be of structure { doc: {}, file: {} }
+          doc = {
+            doc: req.payload.doc,
+            file: req.payload.file,
+            multipart: true
+          };
+          if (typeof doc.doc === 'string') {
+            doc.doc = JSON.parse(doc.doc);
+          }
+          // enforce type on inner doc
+          doc.doc.type = name;
+        }
+        else {
+          doc = req.payload;
+        }
         // enforce type
         doc.type = name;
-        
-        comodl.model.save(req.payload, function(err, doc) {
+
+        comodl.model.save(doc, function(err, doc) {
           if (err) req.reply(updateErrorCode(err));
           else req.reply(doc);
         });
@@ -116,6 +138,7 @@ module.exports = function mountRoutes(comodl, server) {
       }
     });
 
+    
     // DELETE
     server.route({
       method: 'DELETE',
@@ -130,6 +153,7 @@ module.exports = function mountRoutes(comodl, server) {
     });
   });
 
+  
   // GET models/route index
   server.route({
     method: 'GET',

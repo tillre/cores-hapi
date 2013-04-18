@@ -1,11 +1,14 @@
 /*global before after beforeEach afterEach describe it*/
 
+var fs = require('fs');
 var expect = require('chai').expect;
 var nano = require('nano')('http://localhost:5984');
 var request = require('request');
 var comodlApi = require('../index.js');
 
+
 var articleData = require('./article-data.js');
+var imageData = require('./image-data.js');
 
 
 describe('comodl-apis', function() {
@@ -47,6 +50,7 @@ describe('comodl-apis', function() {
     var viewRoute = '/articles/_views/titles';
 
     var server = new (require('hapi').Server)('0.0.0.0', 3333);
+    server.start();
 
     var docId = null;
     var docRev = null;
@@ -101,6 +105,27 @@ describe('comodl-apis', function() {
           done();
         }
       );
+    });
+
+    it('should POST multipart', function(done) {
+      var doc = comodl.model.create(imageData);
+      var file = fs.createReadStream(__dirname + '/test.jpg');
+      
+      var r = request.post('http://localhost:3333/images', function(err, res) {
+        expect(err).to.not.exist;
+        expect(res.statusCode).to.equal(200);
+
+        var d = JSON.parse(res.body);
+        expect(d.file).to.equal('test.jpg');
+        expect(d._id).to.be.a('string');
+        expect(d._rev).to.be.a('string');
+        
+        done();
+      });
+
+      var form = r.form();
+      form.append('doc', JSON.stringify(doc));
+      form.append('file', file);
     });
 
     it('should GET', function(done) {

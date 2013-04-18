@@ -1,5 +1,8 @@
 module.exports = {
 
-  properties: {}
+  properties: {
+    title: { type: 'string' },
+    file: { type: 'string' }
+  }
   
 };

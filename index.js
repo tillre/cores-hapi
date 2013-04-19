@@ -23,15 +23,15 @@ module.exports = function mountRoutes(comodl, server) {
     var info = index[name] = {
       type: name,
       path: path,
-      schema: path + '/_schema',
-      views: {}
+      schemaPath: path + '/_schema',
+      viewPaths: {}
     };
 
     
     // GET schema
     server.route({
       method: 'GET',
-      path: info.schema,
+      path: info.schemaPath,
 
       handler: function(req) {
         req.reply(layout.design.schema);
@@ -68,14 +68,15 @@ module.exports = function mountRoutes(comodl, server) {
     
     // GET views
     _.each(layout.design.views, function(view, viewName) {
-      var viewPath = info.views[viewName] = info.path + '/_views/' + viewName;
-      if (!viewPath) {
+
+      var path = info.viewPaths[viewName] = info.path + '/_views/' + viewName;
+      if (!path) {
         return;
       }
 
       server.route({
         method: 'GET',
-        path: viewPath,
+        path: path,
         
         handler: function(req) {
           comodl.view(name, viewName, function(err, docs) {

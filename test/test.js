@@ -74,9 +74,9 @@ describe('comodl-apis', function() {
           expect(res.result.Article).to.be.a('object');
           expect(res.result.Article.type).to.equal('Article');
           expect(res.result.Article.path).to.be.a('string');
-          expect(res.result.Article.views).to.be.a('object');
-          expect(res.result.Article.views.all).to.be.a('string');
-          expect(res.result.Article.schema).to.be.a('string');
+          expect(res.result.Article.viewPaths).to.be.a('object');
+          expect(res.result.Article.viewPaths.all).to.be.a('string');
+          expect(res.result.Article.schemaPath).to.be.a('string');
           expect(res.result.Image).to.be.a('object');
           done();
         }

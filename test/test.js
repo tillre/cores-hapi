@@ -94,38 +94,44 @@ describe('comodl-apis', function() {
     });
     
     it('should POST', function(done) {
-      var doc = comodl.model.create(articleData);
-      server.inject(
-        { method: 'POST', url: route, payload: JSON.stringify(doc) },
-        function(res) {
-          expect(res.statusCode).to.equal(200);
+      comodl.model.create(articleData, function(err, doc) {
+        expect(err).to.not.exist;
+        
+        server.inject(
+          { method: 'POST', url: route, payload: JSON.stringify(doc) },
+          function(res) {
+            expect(res.statusCode).to.equal(200);
 
-          docId = res.result._id;
-          docRev = res.result._rev;
-          done();
-        }
-      );
+            docId = res.result._id;
+            docRev = res.result._rev;
+            done();
+          }
+        );
+      });
     });
 
     it('should POST multipart', function(done) {
-      var doc = comodl.model.create(imageData);
-      var file = fs.createReadStream(__dirname + '/test.jpg');
-      
-      var r = request.post('http://localhost:3333/images', function(err, res) {
+      comodl.model.create(imageData, function(err, doc) {
         expect(err).to.not.exist;
-        expect(res.statusCode).to.equal(200);
-
-        var d = JSON.parse(res.body);
-        expect(d.file).to.equal('test.jpg');
-        expect(d._id).to.be.a('string');
-        expect(d._rev).to.be.a('string');
         
-        done();
-      });
+        var file = fs.createReadStream(__dirname + '/test.jpg');
+        
+        var r = request.post('http://localhost:3333/images', function(err, res) {
+          expect(err).to.not.exist;
+          expect(res.statusCode).to.equal(200);
 
-      var form = r.form();
-      form.append('doc', JSON.stringify(doc));
-      form.append('file', file);
+          var d = JSON.parse(res.body);
+          expect(d.file).to.equal('test.jpg');
+          expect(d._id).to.be.a('string');
+          expect(d._rev).to.be.a('string');
+          
+          done();
+        });
+
+        var form = r.form();
+        form.append('doc', JSON.stringify(doc));
+        form.append('file', file);
+      });
     });
 
     it('should GET', function(done) {
@@ -162,19 +168,22 @@ describe('comodl-apis', function() {
     });
     
     it('should PUT', function(done) {
-      var doc = comodl.model.create(articleData);
-      server.inject(
-        { method: 'PUT', url: route + '/' + docId + '?rev=' + docRev, payload: JSON.stringify(doc) },
-        function(res) {
-          expect(res.statusCode).to.equal(200);
-          
-          var d = res.result;
-          expect(d._id).to.equal(docId);
-          expect(d._rev).to.not.equal(docRev);
-          docRev = d._rev;
-          done();
-        }
-      );
+      comodl.model.create(articleData, function(err, doc) {
+        expect(err).to.not.exist;
+        
+        server.inject(
+          { method: 'PUT', url: route + '/' + docId + '?rev=' + docRev, payload: JSON.stringify(doc) },
+          function(res) {
+            expect(res.statusCode).to.equal(200);
+            
+            var d = res.result;
+            expect(d._id).to.equal(docId);
+            expect(d._rev).to.not.equal(docRev);
+            docRev = d._rev;
+            done();
+          }
+        );
+      });
     });
 
     it('should PUT without type attribute', function(done) {

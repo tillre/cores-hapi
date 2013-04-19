@@ -82,33 +82,42 @@ module.exports = function mountRoutes(comodl, server) {
     });
 
 
+    function parsePostPut(req) {
+      var doc;
+      var contentType = req.raw.req.headers['content-type'];
+
+      if (contentType && contentType.indexOf('multipart/form-data') !== -1) {
+        // expect payload be of structure { doc: {}, file: {} }
+        doc = {
+          doc: req.payload.doc,
+          file: req.payload.file,
+          multipart: true
+        };
+        if (typeof doc.doc === 'string') {
+          doc.doc = JSON.parse(doc.doc);
+        }
+        // enforce type on inner doc
+        doc.doc.type = name;
+      }
+      else {
+        doc = req.payload;
+      }
+      // enforce type
+      doc.type = name;
+
+      return doc;
+    }
+    
+    
     // POST
     server.route({
       method: 'POST',
       path: info.path,
+
       handler: function(req) {
-        var doc;
-        var contentType = req.raw.req.headers['content-type'];
 
-        if (contentType && contentType.indexOf('multipart/form-data') !== -1) {
-          // expect payload be of structure { doc: {}, file: {} }
-          doc = {
-            doc: req.payload.doc,
-            file: req.payload.file,
-            multipart: true
-          };
-          if (typeof doc.doc === 'string') {
-            doc.doc = JSON.parse(doc.doc);
-          }
-          // enforce type on inner doc
-          doc.doc.type = name;
-        }
-        else {
-          doc = req.payload;
-        }
-        // enforce type
-        doc.type = name;
-
+        var doc = parsePost(req);
+        
         comodl.model.save(doc, function(err, doc) {
           if (err) req.reply(updateErrorCode(err));
           else req.reply(doc);
@@ -123,9 +132,11 @@ module.exports = function mountRoutes(comodl, server) {
       path: info.path + '/{id}',
       config: {
         handler: function(req) {
-          var doc = req.payload;
-          // enforce type
-          doc.type = name;
+          // var doc = req.payload;
+          // // enforce type
+          // doc.type = name;
+
+          var doc = parsePostPut(req);
           
           var m = comodl.model.create(doc);
           m._id = req.params.id;

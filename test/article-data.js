@@ -1,6 +1,6 @@
 module.exports = {
 
-  type: 'Article',
+  type_: 'Article',
   
   title: 'Some Article',
   author: {

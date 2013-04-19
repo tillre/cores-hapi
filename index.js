@@ -104,13 +104,13 @@ module.exports = function mountRoutes(comodl, server) {
           doc.doc = JSON.parse(doc.doc);
         }
         // enforce type on inner doc
-        doc.doc.type = name;
+        doc.doc.type_ = name;
       }
       else {
         doc = req.payload;
       }
       // enforce type
-      doc.type = name;
+      doc.type_ = name;
 
       return doc;
     }

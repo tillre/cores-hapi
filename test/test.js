@@ -41,7 +41,7 @@ describe('comodl-apis', function() {
     nano.db.destroy(dbName, done);
   });
 
-  describe('mount', function() {
+  describe('api', function() {
 
     var comodl = null;
 

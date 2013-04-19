@@ -1,6 +1,6 @@
 module.exports = {
 
-  type: 'Image',
+  type_: 'Image',
   
   title: 'Some Image',
   file: 'test.jpg'

@@ -21,6 +21,7 @@ module.exports = function mountRoutes(comodl, server) {
 
     // index entry
     var info = index[name] = {
+      type: name,
       path: path,
       schema: path + '/_schema',
       views: {}

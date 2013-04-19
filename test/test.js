@@ -72,6 +72,7 @@ describe('comodl-apis', function() {
         function(res) {
           expect(res.statusCode).to.equal(200);
           expect(res.result.Article).to.be.a('object');
+          expect(res.result.Article.type).to.equal('Article');
           expect(res.result.Article.path).to.be.a('string');
           expect(res.result.Article.views).to.be.a('object');
           expect(res.result.Article.views.all).to.be.a('string');

@@ -156,12 +156,11 @@ module.exports = function mountRoutes(resources, server) {
     // DELETE
     server.route({
       method: 'DELETE',
-      // path: /{id}?rev=
-      path: info.path + '/{id}',
+      path: info.path + '/{id}/{rev}',
 
       handler: function(req) {
 
-        resource.destroy({ type_: name, _id: req.params.id, _rev: req.query.rev }, function(err) {
+        resource.destroy({ type_: name, _id: req.params.id, _rev: req.params.rev }, function(err) {
           if (err) req.reply(updateErrorCode(err));
           else req.reply();
         });

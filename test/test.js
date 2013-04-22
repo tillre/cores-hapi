@@ -219,7 +219,7 @@ describe('comodl-apis', function() {
 
     it('should DELETE', function(done) {
       server.inject(
-        { method: 'DELETE', url: route + '/' + docId + '?rev=' + docRev },
+        { method: 'DELETE', url: route + '/' + docId + '/' + docRev },
 
         function(res) {
           expect(res.statusCode).to.equal(200);
@@ -237,7 +237,7 @@ describe('comodl-apis', function() {
 
     it('should not DELETE nonexistant', function(done) {
       server.inject(
-        { method: 'DELETE', url: route + '/' + docId + '?rev=' + docRev},
+        { method: 'DELETE', url: route + '/' + docId + '/' + docRev},
         function(res) {
           expect(res.statusCode).to.equal(400);
           done();

@@ -16,7 +16,7 @@ describe('comodl-apis', function() {
   // create db before tests and destroy afterwards
   var dbName = 'test-comodl-api',
       db = nano.use(dbName),
-      comodlLoad = require('comodl-load');
+      loadResources = require('comodl-load');
 
   
   before(function(done) {
@@ -41,9 +41,9 @@ describe('comodl-apis', function() {
     nano.db.destroy(dbName, done);
   });
 
-  describe('api', function() {
+  describe('http', function() {
 
-    var comodl = null;
+    var resources = null;
 
     var route = '/articles';
     var schemaRoute = '/articles/_schema';
@@ -57,11 +57,12 @@ describe('comodl-apis', function() {
 
     // load modules and mount routes
     before(function(done) {
-      comodlLoad(db, './test', function(err, cm) {
+      loadResources(db, './test', function(err, res) {
         expect(err).to.not.exist;
-        expect(cm).to.be.a('object');
-        comodl = cm;
-        comodlApi(comodl, server);
+        expect(res.Article).to.be.a('object');
+        expect(res.Image).to.be.a('object');
+        resources = res;
+        comodlApi(resources, server);
         done();
       });
     });
@@ -95,44 +96,46 @@ describe('comodl-apis', function() {
     });
     
     it('should POST', function(done) {
-      comodl.model.create(articleData, function(err, doc) {
-        expect(err).to.not.exist;
-        
-        server.inject(
-          { method: 'POST', url: route, payload: JSON.stringify(doc) },
-          function(res) {
-            expect(res.statusCode).to.equal(200);
+      server.inject(
+        { method: 'POST', url: route, payload: JSON.stringify(articleData) },
+        function(res) {
+          expect(res.statusCode).to.equal(200);
 
-            docId = res.result._id;
-            docRev = res.result._rev;
-            done();
-          }
-        );
-      });
+          docId = res.result._id;
+          docRev = res.result._rev;
+          done();
+        }
+      );
+    });
+
+    it('should POST another article doc', function(done) {
+      server.inject(
+        { method: 'POST', url: route, payload: JSON.stringify(articleData) },
+        function(res) {
+          expect(res.statusCode).to.equal(200);
+          done();
+        }
+      );
     });
 
     it('should POST multipart', function(done) {
-      comodl.model.create(imageData, function(err, doc) {
+      var file = fs.createReadStream(__dirname + '/test.jpg');
+      
+      var r = request.post('http://localhost:3333/images', function(err, res) {
         expect(err).to.not.exist;
-        
-        var file = fs.createReadStream(__dirname + '/test.jpg');
-        
-        var r = request.post('http://localhost:3333/images', function(err, res) {
-          expect(err).to.not.exist;
-          expect(res.statusCode).to.equal(200);
+        expect(res.statusCode).to.equal(200);
 
-          var d = JSON.parse(res.body);
-          expect(d.file).to.equal('test.jpg');
-          expect(d._id).to.be.a('string');
-          expect(d._rev).to.be.a('string');
-          
-          done();
-        });
-
-        var form = r.form();
-        form.append('doc', JSON.stringify(doc));
-        form.append('file', file);
+        var d = JSON.parse(res.body);
+        expect(d.file).to.equal('test.jpg');
+        expect(d._id).to.be.a('string');
+        expect(d._rev).to.be.a('string');
+        
+        done();
       });
+
+      var form = r.form();
+      form.append('doc', JSON.stringify(imageData));
+      form.append('file', file);
     });
 
     it('should GET', function(done) {
@@ -162,32 +165,24 @@ describe('comodl-apis', function() {
         { method: 'GET', url: viewRoute },
         function(res) {
           expect(res.statusCode).to.equal(200);
-          expect(res.result.length).to.equal(1);
+          expect(res.result.total_rows).to.equal(2);
+          done();
+        }
+      );
+    });
+
+    it('should GET the view with params', function(done) {
+      server.inject(
+        { method: 'GET', url: viewRoute + '?limit=1' },
+        function(res) {
+          expect(res.statusCode).to.equal(200);
+          expect(res.result.rows.length).to.equal(1);
           done();
         }
       );
     });
     
     it('should PUT', function(done) {
-      comodl.model.create(articleData, function(err, doc) {
-        expect(err).to.not.exist;
-        
-        server.inject(
-          { method: 'PUT', url: route + '/' + docId + '?rev=' + docRev, payload: JSON.stringify(doc) },
-          function(res) {
-            expect(res.statusCode).to.equal(200);
-            
-            var d = res.result;
-            expect(d._id).to.equal(docId);
-            expect(d._rev).to.not.equal(docRev);
-            docRev = d._rev;
-            done();
-          }
-        );
-      });
-    });
-
-    it('should PUT without type attribute', function(done) {
       server.inject(
         { method: 'PUT', url: route + '/' + docId + '?rev=' + docRev, payload: JSON.stringify(articleData) },
         function(res) {
@@ -202,12 +197,40 @@ describe('comodl-apis', function() {
       );
     });
 
+    it('should PUT multipart', function(done) {
+      var file = fs.createReadStream(__dirname + '/test.jpg');
+      
+      var r = request.put('http://localhost:3333/images/' + docId + '?=rev' + docRev, function(err, res) {
+        expect(err).to.not.exist;
+        expect(res.statusCode).to.equal(200);
+
+        var d = JSON.parse(res.body);
+        expect(d.file).to.equal('test.jpg');
+        expect(d._id).to.be.a('string');
+        expect(d._rev).to.be.a('string');
+        
+        done();
+      });
+
+      var form = r.form();
+      form.append('doc', JSON.stringify(imageData));
+      form.append('file', file);
+    });
+
     it('should DELETE', function(done) {
       server.inject(
-        { method: 'DELETE', url: route + '/' + docId + '?rev=' + docRev},
+        { method: 'DELETE', url: route + '/' + docId + '?rev=' + docRev },
+
         function(res) {
           expect(res.statusCode).to.equal(200);
-          done();
+
+          server.inject(
+            { method: 'GET', url: route + '/' + docId },
+            function(res) {
+              expect(res.statusCode).to.equal(404);
+              done();
+            }
+          );
         }
       );
     });
@@ -216,7 +239,7 @@ describe('comodl-apis', function() {
       server.inject(
         { method: 'DELETE', url: route + '/' + docId + '?rev=' + docRev},
         function(res) {
-          expect(res.statusCode).to.equal(404);
+          expect(res.statusCode).to.equal(400);
           done();
         }
       );

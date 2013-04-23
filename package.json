@@ -16,7 +16,6 @@
   "devDependencies": {
     "nano": "3.x.x",
     "mocha": "1.x.x",
-    "chai": "1.x.x",
-    "hapi": "~0.15.6"
+    "chai": "1.x.x"
   }
 }

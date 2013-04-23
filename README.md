@@ -1,2 +1,2 @@
-comodl-api - work in progress
+cores-api - work in progress
 =============================

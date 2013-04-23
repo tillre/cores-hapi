@@ -4,19 +4,19 @@ var fs = require('fs');
 var expect = require('chai').expect;
 var nano = require('nano')('http://localhost:5984');
 var request = require('request');
-var comodlApi = require('../index.js');
+var mountResources = require('../index.js');
 
 
 var articleData = require('./article-data.js');
 var imageData = require('./image-data.js');
 
 
-describe('comodl-apis', function() {
+describe('cores-api', function() {
 
   // create db before tests and destroy afterwards
-  var dbName = 'test-comodl-api',
+  var dbName = 'test-cores-api',
       db = nano.use(dbName),
-      loadResources = require('comodl-load');
+      loadResources = require('cores-load');
 
   
   before(function(done) {
@@ -62,7 +62,7 @@ describe('comodl-apis', function() {
         expect(res.Article).to.be.a('object');
         expect(res.Image).to.be.a('object');
         resources = res;
-        comodlApi(resources, server);
+        mountResources(resources, server);
         done();
       });
     });
@@ -181,10 +181,23 @@ describe('comodl-apis', function() {
         }
       );
     });
+
+    // it('should PUT with id', function(done) {
+    //   server.inject(
+    //     { method: 'PUT', url: route + '/somearticle', payload: JSON.stringify(articleData) },
+    //     function(res) {
+    //       expect(res.statusCode).to.equal(200);
+
+    //       var d = res.result;
+    //       expect(d._id).to.equal('somearticle');
+    //       done();
+    //     }
+    //   );
+    // });
     
-    it('should PUT', function(done) {
+    it('should PUT with id and rev', function(done) {
       server.inject(
-        { method: 'PUT', url: route + '/' + docId + '?rev=' + docRev, payload: JSON.stringify(articleData) },
+        { method: 'PUT', url: route + '/' + docId + '/' + docRev, payload: JSON.stringify(articleData) },
         function(res) {
           expect(res.statusCode).to.equal(200);
           
@@ -200,7 +213,7 @@ describe('comodl-apis', function() {
     it('should PUT multipart', function(done) {
       var file = fs.createReadStream(__dirname + '/test.jpg');
       
-      var r = request.put('http://localhost:3333/images/' + docId + '?=rev' + docRev, function(err, res) {
+      var r = request.put('http://localhost:3333/images/' + docId + '/' + docRev, function(err, res) {
         expect(err).to.not.exist;
         expect(res.statusCode).to.equal(200);
 

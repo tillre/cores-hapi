@@ -1,10 +1,10 @@
 {
-  "name": "comodl-hapi",
+  "name": "cores-hapi",
   "version": "0.0.1",
-  "description": "create hapi REST api from comodl",
+  "description": "create hapi api for cores resources",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha ./test",
+    "test": "./node_modules/mocha/bin/mocha -R spec ./test",
     "watch-tests": "./node_modules/mocha/bin/mocha -w ./test"
   },
   "repository": "",

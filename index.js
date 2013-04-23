@@ -10,7 +10,7 @@ function updateErrorCode(err) {
 
 
 
-module.exports = function mountRoutes(resources, server) {
+module.exports = function mountResources(resources, server) {
 
   // object listing all model routes
   var index = {};
@@ -90,24 +90,14 @@ module.exports = function mountRoutes(resources, server) {
 
     function getDocFromRequest(req) {
 
-      var doc;
+      var doc = req.payload;
       var contentType = req.raw.req.headers['content-type'];
 
       if (contentType && contentType.indexOf('multipart/form-data') !== -1) {
-        // expect payload be of structure { doc: {}, file: {} }
-        doc = {
-          doc: req.payload.doc,
-          file: req.payload.file,
-          multipart: true
-        };
         if (typeof doc.doc === 'string') {
           doc.doc = JSON.parse(doc.doc);
         }
-        // enforce type on inner doc
-        doc.doc.type_ = name;
-      }
-      else {
-        doc = req.payload;
+        doc.isMultipart = true;
       }
       // enforce type
       doc.type_ = name;
@@ -133,17 +123,37 @@ module.exports = function mountRoutes(resources, server) {
     });
 
 
-    // PUT id
+    // // PUT id
+    // server.route({
+    //   method: 'PUT',
+    //   path: info.path + '/{id}',
+
+    //   handler: function(req) {
+
+    //     var doc = getDocFromRequest(req);
+
+    //     doc._id = req.params.id || doc._id;
+    //     doc._rev = req.params.rev || doc._rev;
+
+    //     resource.save(doc, function(err, doc) {
+    //       if (err) req.reply(updateErrorCode(err));
+    //       else req.reply(doc);
+    //     });
+    //   }
+    // });
+    
+
+    // PUT id/rev
     server.route({
       method: 'PUT',
-      path: info.path + '/{id}',
+      path: info.path + '/{id}/{rev}',
 
       handler: function(req) {
 
         var doc = getDocFromRequest(req);
 
         doc._id = req.params.id || doc._id;
-        doc._rev = req.query.rev || doc._rev;
+        doc._rev = req.params.rev || doc._rev;
 
         resource.save(doc, function(err, doc) {
           if (err) req.reply(updateErrorCode(err));

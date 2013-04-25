@@ -94,6 +94,7 @@ describe('cores-api', function() {
         }
       );
     });
+
     
     it('should POST', function(done) {
       server.inject(
@@ -108,6 +109,7 @@ describe('cores-api', function() {
       );
     });
 
+    
     it('should POST another article doc', function(done) {
       server.inject(
         { method: 'POST', url: route, payload: JSON.stringify(articleData) },
@@ -118,6 +120,19 @@ describe('cores-api', function() {
       );
     });
 
+    
+    it('should return errors when POST not validating', function(done) {
+      server.inject(
+        { method: 'POST', url: route, payload: JSON.stringify({title:42}) },
+        function(res) {
+          expect(res.statusCode).to.equal(400);
+          expect(res.result.errors).to.be.a('array');
+          done();
+        }
+      );
+    });
+
+    
     it('should POST multipart', function(done) {
       var file = fs.createReadStream(__dirname + '/test.jpg');
       
@@ -138,6 +153,7 @@ describe('cores-api', function() {
       form.append('file', file);
     });
 
+    
     it('should GET', function(done) {
       server.inject(
         { method: 'GET', url: route + '/' + docId },
@@ -150,6 +166,7 @@ describe('cores-api', function() {
       );
     });
 
+    
     it('should not GET nonexistant', function(done) {
       server.inject(
         { method: 'GET', url: route + '/asdasd'},
@@ -160,6 +177,7 @@ describe('cores-api', function() {
       );
     });
 
+    
     it('should GET the view', function(done) {
       server.inject(
         { method: 'GET', url: viewRoute },
@@ -171,6 +189,7 @@ describe('cores-api', function() {
       );
     });
 
+    
     it('should GET the view with params', function(done) {
       server.inject(
         { method: 'GET', url: viewRoute + '?limit=1' },
@@ -210,6 +229,19 @@ describe('cores-api', function() {
       );
     });
 
+
+    it('should return errors when PUT not validating', function(done) {
+      server.inject(
+        { method: 'PUT', url: route + '/' + docId + '/' + docRev, payload: JSON.stringify({title:42}) },
+        function(res) {
+          expect(res.statusCode).to.equal(400);
+          expect(res.result.errors).to.be.a('array');
+          done();
+        }
+      );
+    });
+
+    
     it('should PUT multipart', function(done) {
       var file = fs.createReadStream(__dirname + '/test.jpg');
       

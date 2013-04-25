@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var i = require('i')();
+var hapi = require('hapi');
 
 
 function updateErrorCode(err) {
@@ -88,7 +89,11 @@ module.exports = function mountResources(resources, server) {
     });
 
 
-    function getDocFromRequest(req) {
+    //
+    // Get the doc from the payload and set isMultipart when multipart data
+    //
+
+    function parseSavePayload(req) {
 
       var doc = req.payload;
       var contentType = req.raw.req.headers['content-type'];
@@ -104,7 +109,36 @@ module.exports = function mountResources(resources, server) {
 
       return doc;
     }
+
+    //
+    // Handle the saving and reply
+    //
     
+    function handleSave(req, doc) {
+        resource.save(doc, function(err, doc) {
+
+          if (err) {
+            if (err.message === 'Validation failed') {
+
+              // create a pass through error, to keep validation errors in the payload
+              // Hapi.error.reformat will otherwise not include them
+              
+              var payload = {
+                code: err.code,
+                message: err.message,
+                error: 'Bad Request',
+                errors: err.errors
+              };
+              var contentType = 'application/json';
+              return req.reply(hapi.error.passThrough(err.code, payload, contentType));
+            }
+
+            return req.reply(updateErrorCode(err));
+          }
+          
+          return req.reply(doc);
+        });
+    }
     
     // POST
     server.route({
@@ -113,12 +147,8 @@ module.exports = function mountResources(resources, server) {
 
       handler: function(req) {
 
-        var doc = getDocFromRequest(req);
-
-        resource.save(doc, function(err, doc) {
-          if (err) req.reply(updateErrorCode(err));
-          else req.reply(doc);
-        });
+        var doc = parseSavePayload(req);
+        handleSave(req, doc);
       }
     });
 
@@ -150,15 +180,12 @@ module.exports = function mountResources(resources, server) {
 
       handler: function(req) {
 
-        var doc = getDocFromRequest(req);
+        var doc = parseSavePayload(req);
 
         doc._id = req.params.id || doc._id;
         doc._rev = req.params.rev || doc._rev;
 
-        resource.save(doc, function(err, doc) {
-          if (err) req.reply(updateErrorCode(err));
-          else req.reply(doc);
-        });
+        handleSave(req, doc);
       }
     });
 

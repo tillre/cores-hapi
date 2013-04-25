@@ -11,11 +11,13 @@
   "author": "",
   "license": "BSD",
   "dependencies": {
-    "underscore": "~1.4.4"
+    "underscore": "~1.4.4",
+    "i": "~0.3.1"
   },
   "devDependencies": {
     "nano": "3.x.x",
     "mocha": "1.x.x",
-    "chai": "1.x.x"
+    "chai": "1.x.x",
+    "request": "~2.20.0"
   }
 }

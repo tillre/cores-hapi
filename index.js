@@ -13,7 +13,7 @@ function updateErrorCode(err) {
 
 module.exports = function mountResources(resources, server) {
 
-  // object listing all model routes
+  // index listing all model routes
   var index = {};
   
   _.each(resources, function(resource, name) {
@@ -28,8 +28,11 @@ module.exports = function mountResources(resources, server) {
       viewPaths: {}
     };
 
-    
+
+    //
     // GET schema
+    //
+    
     server.route({
       method: 'GET',
       path: info.schemaPath,
@@ -39,21 +42,28 @@ module.exports = function mountResources(resources, server) {
       }
     });
 
-    
+
+    //
     // GET all
+    //
+    
     server.route({
       method: 'GET',
       path: info.path,
+
       handler: function(req) {
-        resource.view('all', req.params, function(err, docs) {
+        resource.view('all', req.query, function(err, docs) {
           if (err) req.reply(updateErrorCode(err));
           else req.reply(docs);
         });
       }
     });
 
-    
+
+    //
     // GET by id
+    //
+    
     server.route({
       method: 'GET',
       path: info.path + '/{id}',
@@ -66,8 +76,11 @@ module.exports = function mountResources(resources, server) {
       }
     });
 
-    
+
+    //
     // GET views
+    //
+    
     _.each(resource.design.views, function(view, viewName) {
 
       var path = info.viewPaths[viewName] = info.path + '/_views/' + viewName;
@@ -139,8 +152,12 @@ module.exports = function mountResources(resources, server) {
           return req.reply(doc);
         });
     }
-    
+
+
+    //
     // POST
+    //
+    
     server.route({
       method: 'POST',
       path: info.path,
@@ -173,7 +190,10 @@ module.exports = function mountResources(resources, server) {
     // });
     
 
+    //
     // PUT id/rev
+    //
+    
     server.route({
       method: 'PUT',
       path: info.path + '/{id}/{rev}',
@@ -189,8 +209,11 @@ module.exports = function mountResources(resources, server) {
       }
     });
 
-    
+
+    //
     // DELETE
+    //
+    
     server.route({
       method: 'DELETE',
       path: info.path + '/{id}/{rev}',
@@ -205,8 +228,11 @@ module.exports = function mountResources(resources, server) {
     });
   });
 
-  
+
+  //
   // GET models/route index
+  //
+  
   server.route({
     method: 'GET',
     path: '/_index',
@@ -216,8 +242,3 @@ module.exports = function mountResources(resources, server) {
     }
   });
 };
-
-
-
-
-

@@ -37,9 +37,9 @@ describe('cores-api', function() {
     });
   });
 
-  after(function(done) {
-    nano.db.destroy(dbName, done);
-  });
+  // after(function(done) {
+  //   nano.db.destroy(dbName, done);
+  // });
 
   describe('http', function() {
 
@@ -153,6 +153,30 @@ describe('cores-api', function() {
       form.append('file', file);
     });
 
+
+    it('should GET all', function(done) {
+      server.inject(
+        { method: 'GET', url: route },
+        function(res) {
+          expect(res.result.total_rows).to.be.above(1);
+          expect(res.result.rows.length).to.be.above(1);
+          done();
+        }
+      );
+    });
+
+
+    it('should GET all with params', function(done) {
+      server.inject(
+        { method: 'GET', url: route + '?limit=1' },
+        function(res) {
+          expect(res.result.total_rows).to.be.above(1);
+          expect(res.result.rows.length).to.equal(1);
+          done();
+        }
+      );
+    });
+    
     
     it('should GET', function(done) {
       server.inject(

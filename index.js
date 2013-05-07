@@ -112,9 +112,11 @@ module.exports = function mountResources(resources, server) {
       var contentType = req.raw.req.headers['content-type'];
 
       if (contentType && contentType.indexOf('multipart/form-data') !== -1) {
+
         if (typeof doc.doc === 'string') {
           doc.doc = JSON.parse(doc.doc);
         }
+        doc.doc.type_ = name;
         doc.isMultipart = true;
       }
       // enforce type

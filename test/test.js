@@ -14,7 +14,7 @@ var imageData = require('./image-data.js');
 describe('cores-api', function() {
 
   // create db before tests and destroy afterwards
-  var dbName = 'test-cores-api',
+  var dbName = 'test-cores-hapi',
       db = nano.use(dbName),
       loadResources = require('cores-load');
 
@@ -37,10 +37,11 @@ describe('cores-api', function() {
     });
   });
 
-  // after(function(done) {
-  //   nano.db.destroy(dbName, done);
-  // });
+  after(function(done) {
+    nano.db.destroy(dbName, done);
+  });
 
+  
   describe('http', function() {
 
     var resources = null;
@@ -101,7 +102,8 @@ describe('cores-api', function() {
         { method: 'POST', url: route, payload: JSON.stringify(articleData) },
         function(res) {
           expect(res.statusCode).to.equal(200);
-
+          expect(res.result.type_).to.equal('Article');
+          
           docId = res.result._id;
           docRev = res.result._rev;
           done();
@@ -144,6 +146,7 @@ describe('cores-api', function() {
         expect(d.file).to.equal('test.jpg');
         expect(d._id).to.be.a('string');
         expect(d._rev).to.be.a('string');
+        expect(d.type_).to.equal('Image');
         
         done();
       });
@@ -245,6 +248,7 @@ describe('cores-api', function() {
           expect(res.statusCode).to.equal(200);
           
           var d = res.result;
+          expect(d.type_).to.equal('Article');
           expect(d._id).to.equal(docId);
           expect(d._rev).to.not.equal(docRev);
           docRev = d._rev;
@@ -277,6 +281,7 @@ describe('cores-api', function() {
         expect(d.file).to.equal('test.jpg');
         expect(d._id).to.be.a('string');
         expect(d._rev).to.be.a('string');
+        expect(d.type_).to.equal('Image');
         
         done();
       });

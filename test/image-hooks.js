@@ -1,5 +1,5 @@
 module.exports = {
-  save: function(res, payload, callback) {
+  save: function(app, payload, callback) {
     if (payload.isMultipart) {
       callback(null, payload.doc);
     }

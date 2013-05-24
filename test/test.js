@@ -11,7 +11,7 @@ var articleData = require('./article-data.js');
 var imageData = require('./image-data.js');
 
 
-describe('cores-api', function() {
+describe('cores-hapi', function() {
 
   // create db before tests and destroy afterwards
   var dbName = 'test-cores-hapi',

@@ -15,8 +15,7 @@ module.exports = {
       type: 'array',
       items: { type: 'string' }
     },
-    body: { type: 'string', minLength: 1 },
-
-    required: ['title', 'author', 'body']
-  }
+    body: { type: 'string', minLength: 1 }
+  },
+  required: ['title', 'author', 'body']
 };

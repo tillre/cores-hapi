@@ -38,7 +38,7 @@ module.exports = function mountResources(resources, server) {
       path: info.schemaPath,
 
       handler: function(req) {
-        req.reply(resource.schema);
+        req.reply(resource.schema.toJSON());
       }
     });
 

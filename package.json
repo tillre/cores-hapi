@@ -1,15 +1,28 @@
 {
   "name": "cores-hapi",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "create hapi api for cores resources",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha -R spec ./test",
     "watch-tests": "./node_modules/mocha/bin/mocha -w ./test"
   },
-  "repository": "",
-  "author": "",
-  "license": "BSD",
+  "keywords": [
+    "couchdb",
+    "hapi",
+    "api"
+  ],
+  "author": {
+    "name": "skoni"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/skoni/cores-hapi.git"
+  },
+  "licenses": [ {
+    "type": "Apache 2.0",
+    "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+  } ],
   "dependencies": {
     "underscore": "~1.4.4",
     "i": "~0.3.1",

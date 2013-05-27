@@ -1,6 +1,6 @@
 module.exports = {
 
-  name: 'Article',
+  title: 'Article',
   description: 'Some Article',
 
   properties: {

@@ -1,7 +1,9 @@
 /*global before after beforeEach afterEach describe it*/
 
 var fs = require('fs');
-var expect = require('chai').expect;
+var assert = require('assert');
+var util = require('util');
+
 var nano = require('nano')('http://localhost:5984');
 var request = require('request');
 var mountResources = require('../index.js');
@@ -14,9 +16,9 @@ var imageData = require('./image-data.js');
 describe('cores-hapi', function() {
 
   // create db before tests and destroy afterwards
-  var dbName = 'test-cores-hapi',
-      db = nano.use(dbName),
-      loadResources = require('cores-load');
+  var dbName = 'test-cores-hapi';
+  var db = nano.use(dbName);
+  var cores = require('cores')(db);
 
   
   before(function(done) {
@@ -58,10 +60,10 @@ describe('cores-hapi', function() {
 
     // load modules and mount routes
     before(function(done) {
-      loadResources(db, './test', function(err, res) {
-        expect(err).to.not.exist;
-        expect(res.Article).to.be.a('object');
-        expect(res.Image).to.be.a('object');
+      cores.load('./test', function(err, res) {
+        assert(!err);
+        assert(typeof res.Article === 'object');
+        assert(typeof res.Image === 'object');
         resources = res;
         mountResources(resources, server);
         done();
@@ -72,14 +74,14 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'GET', url: '/_index' },
         function(res) {
-          expect(res.statusCode).to.equal(200);
-          expect(res.result.Article).to.be.a('object');
-          expect(res.result.Article.type).to.equal('Article');
-          expect(res.result.Article.path).to.be.a('string');
-          expect(res.result.Article.viewPaths).to.be.a('object');
-          expect(res.result.Article.viewPaths.all).to.be.a('string');
-          expect(res.result.Article.schemaPath).to.be.a('string');
-          expect(res.result.Image).to.be.a('object');
+          assert(res.statusCode === 200);
+          assert(typeof res.result.Article === 'object');
+          assert(res.result.Article.type === 'Article');
+          assert(typeof res.result.Article.path === 'string');
+          assert(typeof res.result.Article.viewPaths === 'object');
+          assert(typeof res.result.Article.viewPaths.all === 'string');
+          assert(typeof res.result.Article.schemaPath === 'string');
+          assert(typeof res.result.Image === 'object');
           done();
         }
       );
@@ -89,8 +91,8 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'GET', url: schemaRoute },
         function(res) {
-          expect(res.statusCode).to.equal(200);
-          expect(res.result.name).to.equal('Article');
+          assert(res.statusCode === 200);
+          assert(res.result.title === 'Article');
           done();
         }
       );
@@ -101,8 +103,8 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'POST', url: route, payload: JSON.stringify(articleData) },
         function(res) {
-          expect(res.statusCode).to.equal(200);
-          expect(res.result.type_).to.equal('Article');
+          assert(res.statusCode === 200);
+          assert(res.result.type_ === 'Article');
           
           docId = res.result._id;
           docRev = res.result._rev;
@@ -116,7 +118,7 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'POST', url: route, payload: JSON.stringify(articleData) },
         function(res) {
-          expect(res.statusCode).to.equal(200);
+          assert(res.statusCode == 200);
           done();
         }
       );
@@ -127,8 +129,8 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'POST', url: route, payload: JSON.stringify({title:42}) },
         function(res) {
-          expect(res.statusCode).to.equal(400);
-          expect(res.result.errors).to.be.a('array');
+          assert(res.statusCode === 400);
+          assert(util.isArray(res.result.errors));
           done();
         }
       );
@@ -139,14 +141,14 @@ describe('cores-hapi', function() {
       var file = fs.createReadStream(__dirname + '/test.jpg');
       
       var r = request.post('http://localhost:3333/images', function(err, res) {
-        expect(err).to.not.exist;
-        expect(res.statusCode).to.equal(200);
+        assert(!err);
+        assert(res.statusCode === 200);
 
         var d = JSON.parse(res.body);
-        expect(d.file).to.equal('test.jpg');
-        expect(d._id).to.be.a('string');
-        expect(d._rev).to.be.a('string');
-        expect(d.type_).to.equal('Image');
+        assert(d.file === 'test.jpg');
+        assert(typeof d._id === 'string');
+        assert(typeof d._rev === 'string');
+        assert(d.type_ === 'Image');
         
         done();
       });
@@ -161,8 +163,8 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'GET', url: route },
         function(res) {
-          expect(res.result.total_rows).to.be.above(1);
-          expect(res.result.rows.length).to.be.above(1);
+          assert(res.result.total_rows > 1);
+          assert(res.result.rows.length > 1);
           done();
         }
       );
@@ -173,8 +175,8 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'GET', url: route + '?limit=1' },
         function(res) {
-          expect(res.result.total_rows).to.be.above(1);
-          expect(res.result.rows.length).to.equal(1);
+          assert(res.result.total_rows > 1);
+          assert(res.result.rows.length === 1);
           done();
         }
       );
@@ -185,9 +187,9 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'GET', url: route + '/' + docId },
         function(res) {
-          expect(res.statusCode).to.equal(200);
-          expect(res.result._id).to.equal(docId);
-          expect(res.result._rev).to.equal(docRev);
+          assert(res.statusCode === 200);
+          assert(res.result._id === docId);
+          assert(res.result._rev === docRev);
           done();
         }
       );
@@ -198,7 +200,7 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'GET', url: route + '/asdasd'},
         function(res) {
-          expect(res.statusCode).to.equal(404);
+          assert(res.statusCode === 404);
           done();
         }
       );
@@ -209,8 +211,8 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'GET', url: viewRoute },
         function(res) {
-          expect(res.statusCode).to.equal(200);
-          expect(res.result.total_rows).to.equal(2);
+          assert(res.statusCode === 200);
+          assert(res.result.total_rows === 2);
           done();
         }
       );
@@ -221,36 +223,23 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'GET', url: viewRoute + '?limit=1' },
         function(res) {
-          expect(res.statusCode).to.equal(200);
-          expect(res.result.rows.length).to.equal(1);
+          assert(res.statusCode === 200);
+          assert(res.result.rows.length === 1);
           done();
         }
       );
     });
 
-    // it('should PUT with id', function(done) {
-    //   server.inject(
-    //     { method: 'PUT', url: route + '/somearticle', payload: JSON.stringify(articleData) },
-    //     function(res) {
-    //       expect(res.statusCode).to.equal(200);
-
-    //       var d = res.result;
-    //       expect(d._id).to.equal('somearticle');
-    //       done();
-    //     }
-    //   );
-    // });
-    
     it('should PUT with id and rev', function(done) {
       server.inject(
         { method: 'PUT', url: route + '/' + docId + '/' + docRev, payload: JSON.stringify(articleData) },
         function(res) {
-          expect(res.statusCode).to.equal(200);
+          assert(res.statusCode === 200);
           
           var d = res.result;
-          expect(d.type_).to.equal('Article');
-          expect(d._id).to.equal(docId);
-          expect(d._rev).to.not.equal(docRev);
+          assert(d.type_ === 'Article');
+          assert(d._id === docId);
+          assert(d._rev !== docRev);
           docRev = d._rev;
           done();
         }
@@ -262,8 +251,8 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'PUT', url: route + '/' + docId + '/' + docRev, payload: JSON.stringify({title:42}) },
         function(res) {
-          expect(res.statusCode).to.equal(400);
-          expect(res.result.errors).to.be.a('array');
+          assert(res.statusCode === 400);
+          assert(util.isArray(res.result.errors));
           done();
         }
       );
@@ -274,14 +263,14 @@ describe('cores-hapi', function() {
       var file = fs.createReadStream(__dirname + '/test.jpg');
       
       var r = request.put('http://localhost:3333/images/' + docId + '/' + docRev, function(err, res) {
-        expect(err).to.not.exist;
-        expect(res.statusCode).to.equal(200);
+        assert(!err);
+        assert(res.statusCode === 200);
 
         var d = JSON.parse(res.body);
-        expect(d.file).to.equal('test.jpg');
-        expect(d._id).to.be.a('string');
-        expect(d._rev).to.be.a('string');
-        expect(d.type_).to.equal('Image');
+        assert(d.file === 'test.jpg');
+        assert(typeof d._id === 'string');
+        assert(typeof d._rev === 'string');
+        assert(d.type_ === 'Image');
         
         done();
       });
@@ -296,12 +285,12 @@ describe('cores-hapi', function() {
         { method: 'DELETE', url: route + '/' + docId + '/' + docRev },
 
         function(res) {
-          expect(res.statusCode).to.equal(200);
+          assert(res.statusCode === 200);
 
           server.inject(
             { method: 'GET', url: route + '/' + docId },
             function(res) {
-              expect(res.statusCode).to.equal(404);
+              assert(res.statusCode === 404);
               done();
             }
           );
@@ -313,7 +302,7 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'DELETE', url: route + '/' + docId + '/' + docRev},
         function(res) {
-          expect(res.statusCode).to.equal(400);
+          assert(res.statusCode === 400);
           done();
         }
       );

@@ -172,26 +172,6 @@ module.exports = function mountResources(resources, server) {
     });
 
 
-    // // PUT id
-    // server.route({
-    //   method: 'PUT',
-    //   path: info.path + '/{id}',
-
-    //   handler: function(req) {
-
-    //     var doc = getDocFromRequest(req);
-
-    //     doc._id = req.params.id || doc._id;
-    //     doc._rev = req.params.rev || doc._rev;
-
-    //     resource.save(doc, function(err, doc) {
-    //       if (err) req.reply(updateErrorCode(err));
-    //       else req.reply(doc);
-    //     });
-    //   }
-    // });
-    
-
     //
     // PUT id/rev
     //

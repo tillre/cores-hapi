@@ -6,7 +6,7 @@ var util = require('util');
 
 var nano = require('nano')('http://localhost:5984');
 var request = require('request');
-var mountResources = require('../index.js');
+var createApi = require('../index.js');
 
 
 var articleData = require('./article-data.js');
@@ -57,6 +57,7 @@ describe('cores-hapi', function() {
 
     var docId = null;
     var docRev = null;
+    var uuid = null;
 
     // load modules and mount routes
     before(function(done) {
@@ -65,7 +66,7 @@ describe('cores-hapi', function() {
         assert(typeof res.Article === 'object');
         assert(typeof res.Image === 'object');
         resources = res;
-        mountResources(resources, server);
+        createApi(cores, resources, server);
         done();
       });
     });
@@ -82,6 +83,31 @@ describe('cores-hapi', function() {
           assert(typeof res.result.Article.viewPaths.all === 'string');
           assert(typeof res.result.Article.schemaPath === 'string');
           assert(typeof res.result.Image === 'object');
+          done();
+        }
+      );
+    });
+
+    it('should GET a uuid', function(done) {
+      server.inject(
+        { method: 'GET', url: '/_uuids' },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(res.result.uuids.length === 1);
+
+          uuid = res.result.uuids[0];
+          
+          done();
+        }
+      );
+    });
+
+    it('should GET multiple uuids', function(done) {
+      server.inject(
+        { method: 'GET', url: '/_uuids?count=5' },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(res.result.uuids.length === 5);
           done();
         }
       );
@@ -230,6 +256,20 @@ describe('cores-hapi', function() {
       );
     });
 
+    it('should PUT with id', function(done) {
+      server.inject(
+        { method: 'PUT', url: route + '/' + uuid, payload: JSON.stringify(articleData) },
+        function(res) {
+          assert(res.statusCode === 200);
+
+          var d = res.result;
+          assert(d.type_ === 'Article');
+          assert(d._id === uuid);
+          done();
+        }
+      );
+    });
+    
     it('should PUT with id and rev', function(done) {
       server.inject(
         { method: 'PUT', url: route + '/' + docId + '/' + docRev, payload: JSON.stringify(articleData) },

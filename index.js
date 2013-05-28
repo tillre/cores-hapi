@@ -3,6 +3,7 @@ var i = require('i')();
 var hapi = require('hapi');
 
 
+
 function updateErrorCode(err) {
   // default to 500
   err.code = err.code || err.status_code || err.statusCode || 500;
@@ -11,7 +12,7 @@ function updateErrorCode(err) {
 
 
 
-module.exports = function mountResources(resources, server) {
+module.exports = function createApi(cores, resources, server) {
 
   // index listing all model routes
   var index = {};
@@ -130,29 +131,29 @@ module.exports = function mountResources(resources, server) {
     //
     
     function handleSave(req, doc) {
-        resource.save(doc, function(err, doc) {
+      resource.save(doc, function(err, doc) {
 
-          if (err) {
-            if (err.message === 'Validation failed') {
+        if (err) {
+          if (err.message === 'Validation failed') {
 
-              // create a pass through error, to keep validation errors in the payload
-              // Hapi.error.reformat will otherwise not include them
-              
-              var payload = {
-                code: err.code,
-                message: err.message,
-                error: 'Bad Request',
-                errors: err.errors
-              };
-              var contentType = 'application/json';
-              return req.reply(hapi.error.passThrough(err.code, payload, contentType));
-            }
-
-            return req.reply(updateErrorCode(err));
+            // create a pass through error, to keep validation errors in the payload
+            // Hapi.error.reformat will otherwise not include them
+            
+            var payload = {
+              code: err.code,
+              message: err.message,
+              error: 'Bad Request',
+              errors: err.errors
+            };
+            var contentType = 'application/json';
+            return req.reply(hapi.error.passThrough(err.code, payload, contentType));
           }
-          
-          return req.reply(doc);
-        });
+
+          return req.reply(updateErrorCode(err));
+        }
+        
+        return req.reply(doc);
+      });
     }
 
 
@@ -173,6 +174,25 @@ module.exports = function mountResources(resources, server) {
 
 
     //
+    // PUT id
+    //
+
+    server.route({
+      method: 'PUT',
+      path: info.path + '/{id}',
+
+      handler: function(req) {
+
+        var doc = parseSavePayload(req);
+
+        doc._id = req.params.id;
+
+        handleSave(req, doc);
+      }
+    });
+    
+
+    //
     // PUT id/rev
     //
     
@@ -184,8 +204,8 @@ module.exports = function mountResources(resources, server) {
 
         var doc = parseSavePayload(req);
 
-        doc._id = req.params.id || doc._id;
-        doc._rev = req.params.rev || doc._rev;
+        doc._id = req.params.id;
+        doc._rev = req.params.rev;
 
         handleSave(req, doc);
       }
@@ -221,6 +241,24 @@ module.exports = function mountResources(resources, server) {
 
     handler: function(req) {
       req.reply(index);
+    }
+  });
+
+
+  //
+  // GET uuids
+  //
+
+  server.route({
+    method: 'GET',
+    path: '/_uuids',
+
+    handler: function(req) {
+      var count = parseInt(req.query.count, 10) || 1;
+      cores.uuids(count, function(err, uuids) {
+        if (err) req.reply(updateErrorCode(err));
+        else req.reply(uuids);
+      });
     }
   });
 };

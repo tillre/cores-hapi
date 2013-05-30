@@ -1,0 +1,1 @@
+Hapi api for cores.

@@ -1,7 +1,7 @@
 {
   "name": "cores-hapi",
-  "version": "0.0.2",
-  "description": "create hapi api for cores resources",
+  "version": "0.0.4",
+  "description": "Hapi api for cores",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha -R spec ./test",
@@ -19,14 +19,17 @@
     "type": "git",
     "url": "git://github.com/skoni/cores-hapi.git"
   },
-  "licenses": [ {
-    "type": "Apache 2.0",
-    "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-  } ],
+  "licenses": [
+    {
+      "type": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  ],
   "dependencies": {
     "underscore": "~1.4.4",
     "i": "~0.3.1",
-    "hapi": "~1.0.3"
+    "hapi": "~1.0.3",
+    "cores": "0.0.4"
   },
   "devDependencies": {
     "nano": "3.x.x",

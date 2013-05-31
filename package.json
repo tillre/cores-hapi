@@ -28,8 +28,8 @@
   "dependencies": {
     "underscore": "~1.4.4",
     "i": "~0.3.1",
-    "hapi": "~1.0.3",
-    "cores": "0.0.4"
+    "hapi": "~1.4.0",
+    "cores": "0.0.5"
   },
   "devDependencies": {
     "nano": "3.x.x",

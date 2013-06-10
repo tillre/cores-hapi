@@ -43,146 +43,6 @@ describe('cores-hapi', function() {
   after(function(done) {
     nano.db.destroy(dbName, done);
   });
-
-
-  describe('permission', function() {
-
-    var authData = [
-      { user: 'all', pass: 'all',
-        permissions: { load: true, save: true, destroy: true, views: true }},
-      { user: 'load', pass: 'load',
-        permissions: { load: true, save: false, destroy: false, views: false }},
-      { user: 'save', pass: 'save',
-        permissions: { load: false, save: true, destroy: false, views: false }},
-      { user: 'destroy', pass: 'destroy',
-        permissions: { load: false, save: false, destroy: true, views: false }},
-      { user: 'views', pass: 'views',
-        permissions: { load: false, save: false, destroy: true, views: true }}
-    ];
-
-    var createCredentials = function(permissions) {
-      var ps = { permissions: { Article: {} } };
-      for (var n in permissions) {
-        ps.permissions.Article[n] = permissions[n];
-      }
-      return ps;
-    };
-    
-    var authenticate = function(username, password, callback) {
-      var valid = false;
-      authData.forEach(function(data) {
-        if (data.user === username && data.pass === password) {
-          valid = true;
-          callback(null, true, createCredentials(data.permissions));
-        }
-      });
-      if (!valid) {
-        callback(new Error('Authentication failed'), false);
-      };
-    };
-    
-    var server;
-    var resources;
-    var articleId = 'auth_article';
-
-    before(function(done) {
-
-      server = new hapi.Server('0.0.0.0', 3333);
-
-      server.start();
-
-      cores.load('./test', function(err, res) {
-        assert(!err);
-        resources = res;
-        createApi(cores, resources, server);
-        done();
-      });
-    });
-
-    after(function() {
-      server.stop();
-    });
-
-    beforeEach(function(done) {
-      // make sure dummy article exists before each test
-      resources['Article'].load(articleId, function(err) {
-        if (err && err.error === 'not_found') {
-          var d = JSON.parse(JSON.stringify(articleData));
-          d._id = articleId;
-          resources['Article'].save(d, function(err) {
-            done(err);
-          });
-        }
-        else {
-          done(err);
-        }
-      });
-    });
-
-    
-    authData.forEach(function(data) {
-
-      var cred = createCredentials(data.permissions);
-      var shouldLoad = data.permissions.load;
-      var shouldView = data.permissions.views;
-      var shouldSave = data.permissions.save;
-      var shouldDestroy = data.permissions.destroy;
-      
-      it('should ' + (shouldLoad ? '' : 'not ') + 'load', function(done) {
-        server.inject(
-          { method: 'GET', url: '/articles/' + articleId, credentials: cred },
-          function(res) {
-            if (shouldLoad) assert(res.statusCode === 200);
-            else            assert(res.statusCode !== 200);
-            done();
-          }
-        );
-      });
-
-      it('should ' + (shouldView ? '' : 'not ') + 'call view', function(done) {
-        server.inject(
-          { method: 'GET', url: '/articles/_views/titles', credentials: cred },
-          function(res) {
-            if (shouldView) assert(res.statusCode === 200);
-            else            assert(res.statusCode !== 200);
-            done();
-          }
-        );
-      });
-
-      it('should ' + (shouldSave ? '' : 'not ') + 'save', function(done) {
-        resources['Article'].load(articleId, function(err, doc) {
-          assert(!err);
-
-          doc.title = 'Hello Auth';
-          server.inject(
-            { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
-              payload: JSON.stringify(doc),
-              credentials: cred },
-            function(res) {
-              if (shouldSave) assert(res.statusCode === 200);
-              else            assert(res.statusCode !== 200);
-              done();
-            }
-          );
-        });
-      });
-
-      it('should ' + (shouldDestroy ? '' : 'not ') + 'destroy', function(done) {
-        resources['Article'].load(articleId, function(err, doc) {
-          assert(!err);
-          server.inject(
-            { method: 'DELETE', url: '/articles/' + doc._id + '/' + doc._rev, credentials: cred },
-            function(res) {
-              if (shouldDestroy) assert(res.statusCode === 200);
-              else               assert(res.statusCode !== 200);
-              done();
-            }
-          );
-        });
-      });
-    });
-  });
   
   
   describe('api', function() {
@@ -494,5 +354,141 @@ describe('cores-hapi', function() {
         }
       );
     });
+
+
+    describe('permissions', function() {
+
+      var authData = [
+        { user: 'all', pass: 'all',
+          permissions: { load: true, save: true, destroy: true, views: true }},
+        { user: 'load', pass: 'load',
+          permissions: { load: true, save: false, destroy: false, views: false }},
+        { user: 'save', pass: 'save',
+          permissions: { load: false, save: true, destroy: false, views: false }},
+        { user: 'destroy', pass: 'destroy',
+          permissions: { load: false, save: false, destroy: true, views: false }},
+        { user: 'views', pass: 'views',
+          permissions: { load: false, save: false, destroy: true, views: true }}
+      ];
+
+      var createCredentials = function(permissions) {
+        var ps = { permissions: { Article: {} } };
+        for (var n in permissions) {
+          ps.permissions.Article[n] = permissions[n];
+        }
+        return ps;
+      };
+      
+      var articleId = 'auth_article';
+
+      beforeEach(function(done) {
+        // make sure dummy article exists before each test
+        resources['Article'].load(articleId, function(err) {
+          if (err && err.error === 'not_found') {
+            var d = JSON.parse(JSON.stringify(articleData));
+            d._id = articleId;
+            resources['Article'].save(d, function(err) {
+              done(err);
+            });
+          }
+          else {
+            done(err);
+          }
+        });
+      });
+
+      
+      authData.forEach(function(data) {
+
+        var cred = createCredentials(data.permissions);
+        var shouldLoad = data.permissions.load;
+        var shouldView = data.permissions.views;
+        var shouldSave = data.permissions.save;
+        var shouldDestroy = data.permissions.destroy;
+        
+        it('should ' + (shouldLoad ? '' : 'not ') + 'load', function(done) {
+          server.inject(
+            { method: 'GET', url: '/articles/' + articleId, credentials: cred },
+            function(res) {
+              if (shouldLoad) assert(res.statusCode === 200);
+              else            assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+
+        it('should ' + (shouldView ? '' : 'not ') + 'call view', function(done) {
+          server.inject(
+            { method: 'GET', url: '/articles/_views/titles', credentials: cred },
+            function(res) {
+              if (shouldView) assert(res.statusCode === 200);
+              else            assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+
+        it('should ' + (shouldSave ? '' : 'not ') + 'save', function(done) {
+          var doc = JSON.parse(JSON.stringify(articleData));
+          server.inject(
+            { method: 'POST', url: '/articles',
+              payload: JSON.stringify(doc),
+              credentials: cred },
+            function(res) {
+              if (shouldSave) assert(res.statusCode === 200);
+              else            assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+        
+        it('should ' + (shouldSave ? '' : 'not ') + 'save with id', function(done) {
+          var doc = JSON.parse(JSON.stringify(articleData));
+          server.inject(
+            { method: 'PUT', url: '/articles/' + 'saved_' + (new Date().getTime()),
+              payload: JSON.stringify(doc),
+              credentials: cred },
+            function(res) {
+              if (shouldSave) assert(res.statusCode === 200);
+              else            assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+        
+        it('should ' + (shouldSave ? '' : 'not ') + 'update', function(done) {
+          resources['Article'].load(articleId, function(err, doc) {
+            assert(!err);
+
+            doc.title = 'Hello Auth';
+            server.inject(
+              { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
+                payload: JSON.stringify(doc),
+                credentials: cred },
+              function(res) {
+                if (shouldSave) assert(res.statusCode === 200);
+                else            assert(res.statusCode !== 200);
+                done();
+              }
+            );
+          });
+        });
+
+        it('should ' + (shouldDestroy ? '' : 'not ') + 'destroy', function(done) {
+          resources['Article'].load(articleId, function(err, doc) {
+            assert(!err);
+            server.inject(
+              { method: 'DELETE', url: '/articles/' + doc._id + '/' + doc._rev, credentials: cred },
+              function(res) {
+                if (shouldDestroy) assert(res.statusCode === 200);
+                else               assert(res.statusCode !== 200);
+                done();
+              }
+            );
+          });
+        });
+      });
+    });
+    
   });
 });

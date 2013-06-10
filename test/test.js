@@ -4,6 +4,7 @@ var fs = require('fs');
 var assert = require('assert');
 var util = require('util');
 
+var hapi = require('hapi');
 var nano = require('nano')('http://localhost:5984');
 var request = require('request');
 var createApi = require('../index.js');
@@ -43,8 +44,148 @@ describe('cores-hapi', function() {
     nano.db.destroy(dbName, done);
   });
 
+
+  describe('permission', function() {
+
+    var authData = [
+      { user: 'all', pass: 'all',
+        permissions: { load: true, save: true, destroy: true, views: true }},
+      { user: 'load', pass: 'load',
+        permissions: { load: true, save: false, destroy: false, views: false }},
+      { user: 'save', pass: 'save',
+        permissions: { load: false, save: true, destroy: false, views: false }},
+      { user: 'destroy', pass: 'destroy',
+        permissions: { load: false, save: false, destroy: true, views: false }},
+      { user: 'views', pass: 'views',
+        permissions: { load: false, save: false, destroy: true, views: true }}
+    ];
+
+    var createCredentials = function(permissions) {
+      var ps = { permissions: { Article: {} } };
+      for (var n in permissions) {
+        ps.permissions.Article[n] = permissions[n];
+      }
+      return ps;
+    };
+    
+    var authenticate = function(username, password, callback) {
+      var valid = false;
+      authData.forEach(function(data) {
+        if (data.user === username && data.pass === password) {
+          valid = true;
+          callback(null, true, createCredentials(data.permissions));
+        }
+      });
+      if (!valid) {
+        callback(new Error('Authentication failed'), false);
+      };
+    };
+    
+    var server;
+    var resources;
+    var articleId = 'auth_article';
+
+    before(function(done) {
+
+      server = new hapi.Server('0.0.0.0', 3333);
+
+      server.start();
+
+      cores.load('./test', function(err, res) {
+        assert(!err);
+        resources = res;
+        createApi(cores, resources, server);
+        done();
+      });
+    });
+
+    after(function() {
+      server.stop();
+    });
+
+    beforeEach(function(done) {
+      // make sure dummy article exists before each test
+      resources['Article'].load(articleId, function(err) {
+        if (err && err.error === 'not_found') {
+          var d = JSON.parse(JSON.stringify(articleData));
+          d._id = articleId;
+          resources['Article'].save(d, function(err) {
+            done(err);
+          });
+        }
+        else {
+          done(err);
+        }
+      });
+    });
+
+    
+    authData.forEach(function(data) {
+
+      var cred = createCredentials(data.permissions);
+      var shouldLoad = data.permissions.load;
+      var shouldView = data.permissions.views;
+      var shouldSave = data.permissions.save;
+      var shouldDestroy = data.permissions.destroy;
+      
+      it('should ' + (shouldLoad ? '' : 'not ') + 'load', function(done) {
+        server.inject(
+          { method: 'GET', url: '/articles/' + articleId, credentials: cred },
+          function(res) {
+            if (shouldLoad) assert(res.statusCode === 200);
+            else            assert(res.statusCode !== 200);
+            done();
+          }
+        );
+      });
+
+      it('should ' + (shouldView ? '' : 'not ') + 'call view', function(done) {
+        server.inject(
+          { method: 'GET', url: '/articles/_views/titles', credentials: cred },
+          function(res) {
+            if (shouldView) assert(res.statusCode === 200);
+            else            assert(res.statusCode !== 200);
+            done();
+          }
+        );
+      });
+
+      it('should ' + (shouldSave ? '' : 'not ') + 'save', function(done) {
+        resources['Article'].load(articleId, function(err, doc) {
+          assert(!err);
+
+          doc.title = 'Hello Auth';
+          server.inject(
+            { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
+              payload: JSON.stringify(doc),
+              credentials: cred },
+            function(res) {
+              if (shouldSave) assert(res.statusCode === 200);
+              else            assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+      });
+
+      it('should ' + (shouldDestroy ? '' : 'not ') + 'destroy', function(done) {
+        resources['Article'].load(articleId, function(err, doc) {
+          assert(!err);
+          server.inject(
+            { method: 'DELETE', url: '/articles/' + doc._id + '/' + doc._rev, credentials: cred },
+            function(res) {
+              if (shouldDestroy) assert(res.statusCode === 200);
+              else               assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+      });
+    });
+  });
   
-  describe('http', function() {
+  
+  describe('api', function() {
 
     var resources = null;
 
@@ -52,24 +193,30 @@ describe('cores-hapi', function() {
     var schemaRoute = '/articles/_schema';
     var viewRoute = '/articles/_views/titles';
 
-    var server = new (require('hapi').Server)('0.0.0.0', 3333);
-    server.start();
-
     var docId = null;
     var docRev = null;
     var uuid = null;
 
-    // load modules and mount routes
+    var server;
+
+    // create server, load resources and mount routes
     before(function(done) {
+
+      server = new hapi.Server('0.0.0.0', 3333);
+      server.start();
+      
       cores.load('./test', function(err, res) {
         assert(!err);
-        assert(typeof res.Article === 'object');
-        assert(typeof res.Image === 'object');
         resources = res;
         createApi(cores, resources, server);
         done();
       });
     });
+
+    after(function() {
+      server.stop();
+    });
+    
 
     it('should GET the index', function(done) {
       server.inject(
@@ -238,7 +385,7 @@ describe('cores-hapi', function() {
         { method: 'GET', url: viewRoute },
         function(res) {
           assert(res.statusCode === 200);
-          assert(res.result.total_rows === 2);
+          assert(res.result.total_rows >= 2);
           done();
         }
       );

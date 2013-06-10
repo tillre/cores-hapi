@@ -11,6 +11,34 @@ function updateErrorCode(err) {
 }
 
 
+function checkPermissions(request, resource, action, callback) {
+
+  if (request.auth &&
+      request.auth.credentials &&
+      request.auth.credentials.permissions) {
+
+    var permissions = request.auth.credentials.permissions;
+    // console.log('has permissions', permissions);
+    if (permissions[resource.name][action]) {
+      // console.log('permission granted');
+      // permission granted
+      callback();
+      return;
+    }
+    else {
+      // console.log('permission denied');
+      var err = new Error('Permission denied');
+      err.code = 000; // TODO authentication failed http error code
+      callback(err);
+    }
+  }
+  else {
+    // console.log('has no permissions');
+    callback();
+  }
+};
+
+
 
 module.exports = function createApi(cores, resources, server) {
 
@@ -70,9 +98,16 @@ module.exports = function createApi(cores, resources, server) {
       path: info.path + '/{id}',
 
       handler: function(req) {
-        resource.load(req.params.id, function(err, doc) {
-          if (err) req.reply(updateErrorCode(err));
-          else req.reply(doc);
+
+        checkPermissions(req, resource, 'load', function(err) {
+          if (err) {
+            req.reply(updateErrorCode(err));
+            return;
+          }
+          resource.load(req.params.id, function(err, doc) {
+            if (err) req.reply(updateErrorCode(err));
+            else req.reply(doc);
+          });
         });
       }
     });
@@ -94,9 +129,15 @@ module.exports = function createApi(cores, resources, server) {
         path: path,
         
         handler: function(req) {
-          resource.view(viewName, req.query, function(err, docs) {
-            if (err) req.reply(updateErrorCode(err));
-            else req.reply(docs);
+          checkPermissions(req, resource, 'views', function(err) {
+            if (err) {
+              req.reply(updateErrorCode(err));
+              return;
+            }
+            resource.view(viewName, req.query, function(err, docs) {
+              if (err) req.reply(updateErrorCode(err));
+              else req.reply(docs);
+            });
           });
         }
       });
@@ -167,8 +208,14 @@ module.exports = function createApi(cores, resources, server) {
 
       handler: function(req) {
 
-        var doc = parseSavePayload(req);
-        handleSave(req, doc);
+        checkPermissions(req, resource, 'save', function(err) {
+          if (err) {
+            req.reply(updateErrorCode(err));
+            return;
+          }
+          var doc = parseSavePayload(req);
+          handleSave(req, doc);
+        });
       }
     });
 
@@ -183,11 +230,15 @@ module.exports = function createApi(cores, resources, server) {
 
       handler: function(req) {
 
-        var doc = parseSavePayload(req);
-
-        doc._id = req.params.id;
-
-        handleSave(req, doc);
+        checkPermissions(req, resource, 'save', function(err) {
+          if (err) {
+            req.reply(updateErrorCode(err));
+            return;
+          }
+          var doc = parseSavePayload(req);
+          doc._id = req.params.id;
+          handleSave(req, doc);
+        });
       }
     });
     
@@ -202,12 +253,18 @@ module.exports = function createApi(cores, resources, server) {
 
       handler: function(req) {
 
-        var doc = parseSavePayload(req);
+        checkPermissions(req, resource, 'save', function(err) {
+          if (err) {
+            req.reply(updateErrorCode(err));
+            return;
+          }
+          var doc = parseSavePayload(req);
 
-        doc._id = req.params.id;
-        doc._rev = req.params.rev;
+          doc._id = req.params.id;
+          doc._rev = req.params.rev;
 
-        handleSave(req, doc);
+          handleSave(req, doc);
+        });
       }
     });
 
@@ -222,9 +279,17 @@ module.exports = function createApi(cores, resources, server) {
 
       handler: function(req) {
 
-        resource.destroy({ type_: name, _id: req.params.id, _rev: req.params.rev }, function(err) {
-          if (err) req.reply(updateErrorCode(err));
-          else req.reply();
+        checkPermissions(req, resource, 'destroy', function(err) {
+          if (err) {
+            req.reply(updateErrorCode(err));
+            return;
+          }
+          resource.destroy(
+            { type_: name, _id: req.params.id, _rev: req.params.rev },
+            function(err) {
+              if (err) req.reply(updateErrorCode(err));
+              else req.reply();
+            });
         });
       }
     });

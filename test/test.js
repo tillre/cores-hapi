@@ -489,6 +489,5 @@ describe('cores-hapi', function() {
         });
       });
     });
-    
   });
 });

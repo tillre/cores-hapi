@@ -368,10 +368,14 @@ describe('cores-hapi', function() {
         { user: 'destroy', pass: 'destroy',
           permissions: { load: false, save: false, destroy: true, views: false }},
         { user: 'views', pass: 'views',
-          permissions: { load: false, save: false, destroy: true, views: true }}
+          permissions: { load: false, save: false, destroy: true, views: true }},
+        { user: 'none', pass: 'none' }
       ];
 
       var createCredentials = function(permissions) {
+        if (!permissions) {
+          return { permissions: {} };
+        }
         var ps = { permissions: { Article: {} } };
         for (var n in permissions) {
           ps.permissions.Article[n] = permissions[n];
@@ -401,68 +405,39 @@ describe('cores-hapi', function() {
       authData.forEach(function(data) {
 
         var cred = createCredentials(data.permissions);
-        var shouldLoad = data.permissions.load;
-        var shouldView = data.permissions.views;
-        var shouldSave = data.permissions.save;
-        var shouldDestroy = data.permissions.destroy;
-        
-        it('should ' + (shouldLoad ? '' : 'not ') + 'load', function(done) {
-          server.inject(
-            { method: 'GET', url: '/articles/' + articleId, credentials: cred },
-            function(res) {
-              if (shouldLoad) assert(res.statusCode === 200);
-              else            assert(res.statusCode !== 200);
-              done();
-            }
-          );
-        });
+        var shouldLoad = data.permissions && data.permissions.load;
+        var shouldView = data.permissions && data.permissions.views;
+        var shouldSave = data.permissions && data.permissions.save;
+        var shouldDestroy = data.permissions && data.permissions.destroy;
 
-        it('should ' + (shouldView ? '' : 'not ') + 'call view', function(done) {
-          server.inject(
-            { method: 'GET', url: '/articles/_views/titles', credentials: cred },
-            function(res) {
-              if (shouldView) assert(res.statusCode === 200);
-              else            assert(res.statusCode !== 200);
-              done();
-            }
-          );
-        });
-
-        it('should ' + (shouldSave ? '' : 'not ') + 'save', function(done) {
-          var doc = JSON.parse(JSON.stringify(articleData));
-          server.inject(
-            { method: 'POST', url: '/articles',
-              payload: JSON.stringify(doc),
-              credentials: cred },
-            function(res) {
-              if (shouldSave) assert(res.statusCode === 200);
-              else            assert(res.statusCode !== 200);
-              done();
-            }
-          );
-        });
+        describe(data.user, function() {
         
-        it('should ' + (shouldSave ? '' : 'not ') + 'save with id', function(done) {
-          var doc = JSON.parse(JSON.stringify(articleData));
-          server.inject(
-            { method: 'PUT', url: '/articles/' + 'saved_' + (new Date().getTime()),
-              payload: JSON.stringify(doc),
-              credentials: cred },
-            function(res) {
-              if (shouldSave) assert(res.statusCode === 200);
-              else            assert(res.statusCode !== 200);
-              done();
-            }
-          );
-        });
-        
-        it('should ' + (shouldSave ? '' : 'not ') + 'update', function(done) {
-          resources['Article'].load(articleId, function(err, doc) {
-            assert(!err);
-
-            doc.title = 'Hello Auth';
+          it('should ' + (shouldLoad ? '' : 'not ') + 'load', function(done) {
             server.inject(
-              { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
+              { method: 'GET', url: '/articles/' + articleId, credentials: cred },
+              function(res) {
+                if (shouldLoad) assert(res.statusCode === 200);
+                else            assert(res.statusCode !== 200);
+                done();
+              }
+            );
+          });
+
+          it('should ' + (shouldView ? '' : 'not ') + 'call view', function(done) {
+            server.inject(
+              { method: 'GET', url: '/articles/_views/titles', credentials: cred },
+              function(res) {
+                if (shouldView) assert(res.statusCode === 200);
+                else            assert(res.statusCode !== 200);
+                done();
+              }
+            );
+          });
+
+          it('should ' + (shouldSave ? '' : 'not ') + 'save', function(done) {
+            var doc = JSON.parse(JSON.stringify(articleData));
+            server.inject(
+              { method: 'POST', url: '/articles',
                 payload: JSON.stringify(doc),
                 credentials: cred },
               function(res) {
@@ -472,19 +447,51 @@ describe('cores-hapi', function() {
               }
             );
           });
-        });
-
-        it('should ' + (shouldDestroy ? '' : 'not ') + 'destroy', function(done) {
-          resources['Article'].load(articleId, function(err, doc) {
-            assert(!err);
+          
+          it('should ' + (shouldSave ? '' : 'not ') + 'save with id', function(done) {
+            var doc = JSON.parse(JSON.stringify(articleData));
             server.inject(
-              { method: 'DELETE', url: '/articles/' + doc._id + '/' + doc._rev, credentials: cred },
+              { method: 'PUT', url: '/articles/' + 'saved_' + (new Date().getTime()),
+                payload: JSON.stringify(doc),
+                credentials: cred },
               function(res) {
-                if (shouldDestroy) assert(res.statusCode === 200);
-                else               assert(res.statusCode !== 200);
+                if (shouldSave) assert(res.statusCode === 200);
+                else            assert(res.statusCode !== 200);
                 done();
               }
             );
+          });
+          
+          it('should ' + (shouldSave ? '' : 'not ') + 'update', function(done) {
+            resources['Article'].load(articleId, function(err, doc) {
+              assert(!err);
+
+              doc.title = 'Hello Auth';
+              server.inject(
+                { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
+                  payload: JSON.stringify(doc),
+                  credentials: cred },
+                function(res) {
+                  if (shouldSave) assert(res.statusCode === 200);
+                  else            assert(res.statusCode !== 200);
+                  done();
+                }
+              );
+            });
+          });
+
+          it('should ' + (shouldDestroy ? '' : 'not ') + 'destroy', function(done) {
+            resources['Article'].load(articleId, function(err, doc) {
+              assert(!err);
+              server.inject(
+                { method: 'DELETE', url: '/articles/' + doc._id + '/' + doc._rev, credentials: cred },
+                function(res) {
+                  if (shouldDestroy) assert(res.statusCode === 200);
+                  else               assert(res.statusCode !== 200);
+                  done();
+                }
+              );
+            });
           });
         });
       });

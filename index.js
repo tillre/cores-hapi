@@ -17,23 +17,20 @@ function checkPermissions(request, resource, action, callback) {
       request.auth.credentials &&
       request.auth.credentials.permissions) {
 
-    var permissions = request.auth.credentials.permissions;
-    // console.log('has permissions', permissions);
-    if (permissions[resource.name][action]) {
-      // console.log('permission granted');
+    var permissions = request.auth.credentials.permissions[resource.name];
+
+    if (permissions && permissions[action]) {
       // permission granted
       callback();
       return;
     }
     else {
-      // console.log('permission denied');
       var err = new Error('Permission denied');
-      err.code = 000; // TODO authentication failed http error code
+      err.code = 401;
       callback(err);
     }
   }
   else {
-    // console.log('has no permissions');
     callback();
   }
 };

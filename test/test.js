@@ -63,14 +63,12 @@ describe('cores-hapi', function() {
     before(function(done) {
 
       server = new hapi.Server('0.0.0.0', 3333);
-      server.pack.app.cores = cores;
       
       cores.load('./test', function(err, res) {
         assert(!err);
         resources = res;
 
-        server.pack.app.resources = resources;
-        server.pack.require('../', function(err) {
+        server.pack.require('../', { cores: cores, resources: res }, function(err) {
           assert(!err);
 
           server.start(function(err) {
@@ -78,9 +76,6 @@ describe('cores-hapi', function() {
             done();
           });
         });
-        
-        // createApi(cores, resources, server);
-        // done();
       });
     });
 

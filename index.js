@@ -43,8 +43,8 @@ module.exports.register = function(plugin, options, next) {
   };
 
   // these need to be provided
-  var cores = plugin.app.cores;
-  var resources = plugin.app.resources;
+  var cores = options.cores;
+  var resources = options.resources;
 
   // index listing all model routes
   var index = {};

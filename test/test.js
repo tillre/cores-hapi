@@ -7,7 +7,7 @@ var util = require('util');
 var hapi = require('hapi');
 var nano = require('nano')('http://localhost:5984');
 var request = require('request');
-var createApi = require('../index.js');
+var coresHapi = require('../index.js');
 
 
 var articleData = require('./article-data.js');
@@ -63,13 +63,24 @@ describe('cores-hapi', function() {
     before(function(done) {
 
       server = new hapi.Server('0.0.0.0', 3333);
-      server.start();
+      server.pack.app.cores = cores;
       
       cores.load('./test', function(err, res) {
         assert(!err);
         resources = res;
-        createApi(cores, resources, server);
-        done();
+
+        server.pack.app.resources = resources;
+        server.pack.require('../', function(err) {
+          assert(!err);
+
+          server.start(function(err) {
+            assert(!err);
+            done();
+          });
+        });
+        
+        // createApi(cores, resources, server);
+        // done();
       });
     });
 

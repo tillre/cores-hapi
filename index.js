@@ -36,8 +36,15 @@ function checkPermissions(request, resource, action, callback) {
 };
 
 
+module.exports.register = function(pack, options, next) {
 
-module.exports = function createApi(cores, resources, server) {
+  if (typeof pack.route !== 'function') {
+    return next(new Error('Plugin requires route permission'));
+  };
+
+  // these need to be provided
+  var cores = pack.app.cores;
+  var resources = pack.app.resources;
 
   // index listing all model routes
   var index = {};
@@ -59,7 +66,7 @@ module.exports = function createApi(cores, resources, server) {
     // GET schema
     //
     
-    server.route({
+    pack.route({
       method: 'GET',
       path: info.schemaPath,
 
@@ -73,7 +80,7 @@ module.exports = function createApi(cores, resources, server) {
     // GET all
     //
     
-    server.route({
+    pack.route({
       method: 'GET',
       path: info.path,
 
@@ -90,7 +97,7 @@ module.exports = function createApi(cores, resources, server) {
     // GET by id
     //
     
-    server.route({
+    pack.route({
       method: 'GET',
       path: info.path + '/{id}',
 
@@ -121,7 +128,7 @@ module.exports = function createApi(cores, resources, server) {
         return;
       }
 
-      server.route({
+      pack.route({
         method: 'GET',
         path: path,
         
@@ -199,7 +206,7 @@ module.exports = function createApi(cores, resources, server) {
     // POST
     //
     
-    server.route({
+    pack.route({
       method: 'POST',
       path: info.path,
 
@@ -221,7 +228,7 @@ module.exports = function createApi(cores, resources, server) {
     // PUT id
     //
 
-    server.route({
+    pack.route({
       method: 'PUT',
       path: info.path + '/{id}',
 
@@ -244,7 +251,7 @@ module.exports = function createApi(cores, resources, server) {
     // PUT id/rev
     //
     
-    server.route({
+    pack.route({
       method: 'PUT',
       path: info.path + '/{id}/{rev}',
 
@@ -270,7 +277,7 @@ module.exports = function createApi(cores, resources, server) {
     // DELETE
     //
     
-    server.route({
+    pack.route({
       method: 'DELETE',
       path: info.path + '/{id}/{rev}',
 
@@ -297,7 +304,7 @@ module.exports = function createApi(cores, resources, server) {
   // GET models/route index
   //
   
-  server.route({
+  pack.route({
     method: 'GET',
     path: '/_index',
 
@@ -311,7 +318,7 @@ module.exports = function createApi(cores, resources, server) {
   // GET uuids
   //
 
-  server.route({
+  pack.route({
     method: 'GET',
     path: '/_uuids',
 
@@ -323,4 +330,7 @@ module.exports = function createApi(cores, resources, server) {
       });
     }
   });
+
+  next();
 };
+

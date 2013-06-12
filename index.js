@@ -36,15 +36,15 @@ function checkPermissions(request, resource, action, callback) {
 };
 
 
-module.exports.register = function(pack, options, next) {
+module.exports.register = function(plugin, options, next) {
 
-  if (typeof pack.route !== 'function') {
+  if (typeof plugin.route !== 'function') {
     return next(new Error('Plugin requires route permission'));
   };
 
   // these need to be provided
-  var cores = pack.app.cores;
-  var resources = pack.app.resources;
+  var cores = plugin.app.cores;
+  var resources = plugin.app.resources;
 
   // index listing all model routes
   var index = {};
@@ -66,7 +66,7 @@ module.exports.register = function(pack, options, next) {
     // GET schema
     //
     
-    pack.route({
+    plugin.route({
       method: 'GET',
       path: info.schemaPath,
 
@@ -80,7 +80,7 @@ module.exports.register = function(pack, options, next) {
     // GET all
     //
     
-    pack.route({
+    plugin.route({
       method: 'GET',
       path: info.path,
 
@@ -97,7 +97,7 @@ module.exports.register = function(pack, options, next) {
     // GET by id
     //
     
-    pack.route({
+    plugin.route({
       method: 'GET',
       path: info.path + '/{id}',
 
@@ -128,7 +128,7 @@ module.exports.register = function(pack, options, next) {
         return;
       }
 
-      pack.route({
+      plugin.route({
         method: 'GET',
         path: path,
         
@@ -206,7 +206,7 @@ module.exports.register = function(pack, options, next) {
     // POST
     //
     
-    pack.route({
+    plugin.route({
       method: 'POST',
       path: info.path,
 
@@ -228,7 +228,7 @@ module.exports.register = function(pack, options, next) {
     // PUT id
     //
 
-    pack.route({
+    plugin.route({
       method: 'PUT',
       path: info.path + '/{id}',
 
@@ -251,7 +251,7 @@ module.exports.register = function(pack, options, next) {
     // PUT id/rev
     //
     
-    pack.route({
+    plugin.route({
       method: 'PUT',
       path: info.path + '/{id}/{rev}',
 
@@ -277,7 +277,7 @@ module.exports.register = function(pack, options, next) {
     // DELETE
     //
     
-    pack.route({
+    plugin.route({
       method: 'DELETE',
       path: info.path + '/{id}/{rev}',
 
@@ -304,7 +304,7 @@ module.exports.register = function(pack, options, next) {
   // GET models/route index
   //
   
-  pack.route({
+  plugin.route({
     method: 'GET',
     path: '/_index',
 
@@ -318,7 +318,7 @@ module.exports.register = function(pack, options, next) {
   // GET uuids
   //
 
-  pack.route({
+  plugin.route({
     method: 'GET',
     path: '/_uuids',
 

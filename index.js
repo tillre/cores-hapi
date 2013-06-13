@@ -45,6 +45,7 @@ module.exports.register = function(plugin, options, next) {
   // these need to be provided
   var cores = options.cores;
   var resources = options.resources;
+  var auth = options.auth || false;
 
   // index listing all model routes
   var index = {};
@@ -69,9 +70,11 @@ module.exports.register = function(plugin, options, next) {
     plugin.route({
       method: 'GET',
       path: info.schemaPath,
-
-      handler: function(req) {
-        req.reply(resource.schema.toJSON());
+      config: {
+        auth: auth,
+        handler: function(req) {
+          req.reply(resource.schema.toJSON());
+        }
       }
     });
 
@@ -83,12 +86,20 @@ module.exports.register = function(plugin, options, next) {
     plugin.route({
       method: 'GET',
       path: info.path,
-
-      handler: function(req) {
-        resource.view('all', req.query, function(err, docs) {
-          if (err) req.reply(updateErrorCode(err));
-          else req.reply(docs);
-        });
+      config: {
+        auth: auth,
+        handler: function(req) {
+          checkPermissions(req, resource, 'load', function(err) {
+            if (err) {
+              req.reply(updateErrorCode(err));
+              return;
+            }
+            resource.all(req.query, function(err, result) {
+              if (err) req.reply(updateErrorCode(err));
+              else req.reply(result);
+            });
+          });
+        }
       }
     });
 
@@ -100,19 +111,21 @@ module.exports.register = function(plugin, options, next) {
     plugin.route({
       method: 'GET',
       path: info.path + '/{id}',
+      config: {
+        auth: auth,
+        handler: function(req) {
 
-      handler: function(req) {
-
-        checkPermissions(req, resource, 'load', function(err) {
-          if (err) {
-            req.reply(updateErrorCode(err));
-            return;
-          }
-          resource.load(req.params.id, function(err, doc) {
-            if (err) req.reply(updateErrorCode(err));
-            else req.reply(doc);
+          checkPermissions(req, resource, 'load', function(err) {
+            if (err) {
+              req.reply(updateErrorCode(err));
+              return;
+            }
+            resource.load(req.params.id, function(err, doc) {
+              if (err) req.reply(updateErrorCode(err));
+              else req.reply(doc);
+            });
           });
-        });
+        }
       }
     });
 
@@ -131,18 +144,21 @@ module.exports.register = function(plugin, options, next) {
       plugin.route({
         method: 'GET',
         path: path,
-        
-        handler: function(req) {
-          checkPermissions(req, resource, 'views', function(err) {
-            if (err) {
-              req.reply(updateErrorCode(err));
-              return;
-            }
-            resource.view(viewName, req.query, function(err, docs) {
-              if (err) req.reply(updateErrorCode(err));
-              else req.reply(docs);
+        config: {
+          auth: auth,
+          handler: function(req) {
+
+            checkPermissions(req, resource, 'views', function(err) {
+              if (err) {
+                req.reply(updateErrorCode(err));
+                return;
+              }
+              resource.view(viewName, req.query, function(err, docs) {
+                if (err) req.reply(updateErrorCode(err));
+                else req.reply(docs);
+              });
             });
-          });
+          }
         }
       });
     });
@@ -209,17 +225,19 @@ module.exports.register = function(plugin, options, next) {
     plugin.route({
       method: 'POST',
       path: info.path,
+      config: {
+        auth: auth,
+        handler: function(req) {
 
-      handler: function(req) {
-
-        checkPermissions(req, resource, 'save', function(err) {
-          if (err) {
-            req.reply(updateErrorCode(err));
-            return;
-          }
-          var doc = parseSavePayload(req);
-          handleSave(req, doc);
-        });
+          checkPermissions(req, resource, 'save', function(err) {
+            if (err) {
+              req.reply(updateErrorCode(err));
+              return;
+            }
+            var doc = parseSavePayload(req);
+            handleSave(req, doc);
+          });
+        }
       }
     });
 
@@ -231,18 +249,20 @@ module.exports.register = function(plugin, options, next) {
     plugin.route({
       method: 'PUT',
       path: info.path + '/{id}',
+      config: {
+        auth: auth,
+        handler: function(req) {
 
-      handler: function(req) {
-
-        checkPermissions(req, resource, 'save', function(err) {
-          if (err) {
-            req.reply(updateErrorCode(err));
-            return;
-          }
-          var doc = parseSavePayload(req);
-          doc._id = req.params.id;
-          handleSave(req, doc);
-        });
+          checkPermissions(req, resource, 'save', function(err) {
+            if (err) {
+              req.reply(updateErrorCode(err));
+              return;
+            }
+            var doc = parseSavePayload(req);
+            doc._id = req.params.id;
+            handleSave(req, doc);
+          });
+        }
       }
     });
     
@@ -254,21 +274,23 @@ module.exports.register = function(plugin, options, next) {
     plugin.route({
       method: 'PUT',
       path: info.path + '/{id}/{rev}',
+      config: {
+        auth: auth,
+        handler: function(req) {
 
-      handler: function(req) {
+          checkPermissions(req, resource, 'save', function(err) {
+            if (err) {
+              req.reply(updateErrorCode(err));
+              return;
+            }
+            var doc = parseSavePayload(req);
 
-        checkPermissions(req, resource, 'save', function(err) {
-          if (err) {
-            req.reply(updateErrorCode(err));
-            return;
-          }
-          var doc = parseSavePayload(req);
+            doc._id = req.params.id;
+            doc._rev = req.params.rev;
 
-          doc._id = req.params.id;
-          doc._rev = req.params.rev;
-
-          handleSave(req, doc);
-        });
+            handleSave(req, doc);
+          });
+        }
       }
     });
 
@@ -280,21 +302,23 @@ module.exports.register = function(plugin, options, next) {
     plugin.route({
       method: 'DELETE',
       path: info.path + '/{id}/{rev}',
+      config: {
+        auth: auth,
+        handler: function(req) {
 
-      handler: function(req) {
-
-        checkPermissions(req, resource, 'destroy', function(err) {
-          if (err) {
-            req.reply(updateErrorCode(err));
-            return;
-          }
-          resource.destroy(
-            { type_: name, _id: req.params.id, _rev: req.params.rev },
-            function(err) {
-              if (err) req.reply(updateErrorCode(err));
-              else req.reply();
-            });
-        });
+          checkPermissions(req, resource, 'destroy', function(err) {
+            if (err) {
+              req.reply(updateErrorCode(err));
+              return;
+            }
+            resource.destroy(
+              { type_: name, _id: req.params.id, _rev: req.params.rev },
+              function(err) {
+                if (err) req.reply(updateErrorCode(err));
+                else req.reply();
+              });
+          });
+        }
       }
     });
   });
@@ -307,9 +331,11 @@ module.exports.register = function(plugin, options, next) {
   plugin.route({
     method: 'GET',
     path: '/_index',
-
-    handler: function(req) {
-      req.reply(index);
+    config: {
+      auth: auth,
+      handler: function(req) {
+        req.reply(index);
+      }
     }
   });
 
@@ -321,13 +347,15 @@ module.exports.register = function(plugin, options, next) {
   plugin.route({
     method: 'GET',
     path: '/_uuids',
-
-    handler: function(req) {
-      var count = parseInt(req.query.count, 10) || 1;
-      cores.uuids(count, function(err, uuids) {
-        if (err) req.reply(updateErrorCode(err));
-        else req.reply(uuids);
-      });
+    config: {
+      auth: auth,
+      handler: function(req) {
+        var count = parseInt(req.query.count, 10) || 1;
+        cores.uuids(count, function(err, uuids) {
+          if (err) req.reply(updateErrorCode(err));
+          else req.reply(uuids);
+        });
+      }
     }
   });
 

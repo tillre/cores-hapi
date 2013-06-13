@@ -418,7 +418,7 @@ describe('cores-hapi', function() {
 
         describe(data.user, function() {
         
-          it('should ' + (shouldLoad ? '' : 'not ') + 'load', function(done) {
+          it('should ' + (shouldLoad ? '' : 'not ') + 'load single', function(done) {
             server.inject(
               { method: 'GET', url: '/articles/' + articleId, credentials: cred },
               function(res) {
@@ -429,6 +429,17 @@ describe('cores-hapi', function() {
             );
           });
 
+          it('should ' + (shouldLoad ? '' : 'not ') + 'load all', function(done) {
+            server.inject(
+              { method: 'GET', url: '/articles', credentials: cred },
+              function(res) {
+                if (shouldLoad) assert(res.statusCode === 200);
+                else            assert(res.statusCode !== 200);
+                done();
+              }
+            );
+          });
+          
           it('should ' + (shouldView ? '' : 'not ') + 'call view', function(done) {
             server.inject(
               { method: 'GET', url: '/articles/_views/titles', credentials: cred },

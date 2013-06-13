@@ -14,12 +14,49 @@ var articleData = require('./article-data.js');
 var imageData = require('./image-data.js');
 
 
+
+
 describe('cores-hapi', function() {
 
-  // create db before tests and destroy afterwards
   var dbName = 'test-cores-hapi';
   var db = nano.use(dbName);
   var cores = require('cores')(db);
+
+  var server;
+  var resources;
+
+  
+  var startServer = function(options, done) {
+
+    server = new hapi.Server('0.0.0.0', 3333);
+
+    if (options.auth) {
+      server.auth('basic', {
+        scheme: 'basic',
+        validateFunc: function(username, password, callback) {
+          callback(new Error('Auth failed'));
+        }
+      });
+    }      
+
+    options.cores = cores;
+    cores.load('./test', function(err, res) {
+      assert(!err);
+
+      resources = res;
+      options.resources = resources;
+      
+      server.pack.require('../', options, function(err) {
+        assert(!err);
+        server.start(done);
+      });
+    });
+  };
+
+  
+  var stopServer = function(done) {
+    server.stop(done);
+  };
 
   
   before(function(done) {
@@ -40,14 +77,15 @@ describe('cores-hapi', function() {
     });
   });
 
+  
   after(function(done) {
     nano.db.destroy(dbName, done);
   });
-  
+
   
   describe('api', function() {
 
-    var resources = null;
+    // var resources = null;
 
     var route = '/articles';
     var schemaRoute = '/articles/_schema';
@@ -57,31 +95,12 @@ describe('cores-hapi', function() {
     var docRev = null;
     var uuid = null;
 
-    var server;
 
-    // create server, load resources and mount routes
     before(function(done) {
-
-      server = new hapi.Server('0.0.0.0', 3333);
-      
-      cores.load('./test', function(err, res) {
-        assert(!err);
-        resources = res;
-
-        server.pack.require('../', { cores: cores, resources: res }, function(err) {
-          assert(!err);
-
-          server.start(function(err) {
-            assert(!err);
-            done();
-          });
-        });
-      });
+      startServer({}, done);
     });
 
-    after(function() {
-      server.stop();
-    });
+    after(stopServer);
     
 
     it('should GET the index', function(done) {
@@ -511,6 +530,60 @@ describe('cores-hapi', function() {
             });
           });
         });
+      });
+    });
+  });
+
+
+  describe('api with auth', function() {
+
+    before(function(done) {
+      startServer({ auth: true }, done);
+    });
+
+    after(stopServer);
+
+    var routes = [
+      { name: 'GET', method: 'get', url: 'http://localhost:3333/articles' },
+      { name: 'GET/id', method: 'get', url: 'http://localhost:3333/articles/auth_article' },
+      { name: 'GET/_schema', method: 'get', url: 'http://localhost:3333/articles/_schema' },
+      { name: 'GET/_views/*', method: 'get', url: 'http://localhost:3333/articles/_views/titles' },
+
+      { name: 'POST', method: 'post', url: 'http://localhost:3333/articles' },
+      { name: 'PUT/id', method: 'put', url: 'http://localhost:3333/articles/auth_article' },
+      { name: 'PUT/id/rev', method: 'put', url: 'http://localhost:3333/articles/auth_article/123' },
+
+      { name: 'DELETE/id/rev', method: 'del', url: 'http://localhost:3333/articles/auth_article/123' },
+
+      { name: 'GET/_index', method: 'get', url: 'http://localhost:3333/_index' },
+      { name: 'GET/_uuids', method: 'get', url: 'http://localhost:3333/_uuids' }
+    ];
+
+    routes.forEach(function(route) {
+      it('should not ' + route.name, function(done) {
+        var r = request[route.method](route.url, function(err, res) {
+          assert(!err);
+          assert(res.statusCode === 401);
+          done();
+        });
+      });
+    });
+  });
+
+
+  describe('api with basePath', function() {
+
+    before(function(done) {
+      startServer({ basePath: '/foo' }, done);
+    });
+
+    after(stopServer);
+
+    it('should get index', function(done) {
+      var r = request.get('http://localhost:3333/foo/_index', function(err, res) {
+        assert(!err);
+        assert(res.statusCode === 200);
+        done();
       });
     });
   });

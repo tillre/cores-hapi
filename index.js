@@ -46,13 +46,14 @@ module.exports.register = function(plugin, options, next) {
   var cores = options.cores;
   var resources = options.resources;
   var auth = options.auth || false;
+  var basePath = options.basePath || '';
 
   // index listing all model routes
   var index = {};
   
   _.each(resources, function(resource, name) {
 
-    var path = '/' + i.pluralize(name.toLowerCase());
+    var path = basePath + '/' + i.pluralize(name.toLowerCase());
 
     // index entry
     var info = index[name] = {
@@ -330,7 +331,7 @@ module.exports.register = function(plugin, options, next) {
   
   plugin.route({
     method: 'GET',
-    path: '/_index',
+    path: basePath + '/_index',
     config: {
       auth: auth,
       handler: function(req) {
@@ -346,7 +347,7 @@ module.exports.register = function(plugin, options, next) {
 
   plugin.route({
     method: 'GET',
-    path: '/_uuids',
+    path: basePath + '/_uuids',
     config: {
       auth: auth,
       handler: function(req) {

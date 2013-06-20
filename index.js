@@ -11,18 +11,28 @@ function updateErrorCode(err) {
 }
 
 
-function checkPermissions(request, resource, action, callback) {
+// names of the actions compared with permission
+var ACTION_NAMES = {
+  load: 'load',
+  create: 'create',
+  update: 'update',
+  destroy: 'destroy',
+  view: 'view'
+};
 
-  if (request.auth &&
-      request.auth.credentials &&
-      request.auth.credentials.permissions) {
 
-    var permissions = request.auth.credentials.permissions[resource.name];
+function checkPermissions(resource, action, callback) {
+  // gets called with request as this
+  
+  if (this.auth &&
+      this.auth.credentials &&
+      this.auth.credentials.permissions) {
+
+    var permissions = this.auth.credentials.permissions[resource.name];
 
     if (permissions && permissions[action]) {
       // permission granted
-      callback();
-      return;
+      return callback();
     }
     else {
       var err = new Error('Permission denied');
@@ -73,8 +83,8 @@ module.exports.register = function(plugin, options, next) {
       path: info.schemaPath,
       config: {
         auth: auth,
-        handler: function(req) {
-          req.reply(resource.schema.toJSON());
+        handler: function() {
+          this.reply(resource.schema.toJSON());
         }
       }
     });
@@ -89,15 +99,17 @@ module.exports.register = function(plugin, options, next) {
       path: info.path,
       config: {
         auth: auth,
-        handler: function(req) {
-          checkPermissions(req, resource, 'load', function(err) {
+        handler: function() {
+
+          var self = this;
+
+          checkPermissions.call(this, resource, ACTION_NAMES.load, function(err) {
             if (err) {
-              req.reply(updateErrorCode(err));
-              return;
+              return self.reply(updateErrorCode(err));
             }
-            resource.all(req.query, function(err, result) {
-              if (err) req.reply(updateErrorCode(err));
-              else req.reply(result);
+            resource.all(self.query, function(err, result) {
+              if (err) self.reply(updateErrorCode(err));
+              else self.reply(result);
             });
           });
         }
@@ -114,16 +126,16 @@ module.exports.register = function(plugin, options, next) {
       path: info.path + '/{id}',
       config: {
         auth: auth,
-        handler: function(req) {
-
-          checkPermissions(req, resource, 'load', function(err) {
+        handler: function() {
+          var self = this;
+          
+          checkPermissions.call(this, resource, ACTION_NAMES.load, function(err) {
             if (err) {
-              req.reply(updateErrorCode(err));
-              return;
+              return self.reply(updateErrorCode(err));
             }
-            resource.load(req.params.id, function(err, doc) {
-              if (err) req.reply(updateErrorCode(err));
-              else req.reply(doc);
+            resource.load(self.params.id, function(err, doc) {
+              if (err) self.reply(updateErrorCode(err));
+              else self.reply(doc);
             });
           });
         }
@@ -147,16 +159,16 @@ module.exports.register = function(plugin, options, next) {
         path: path,
         config: {
           auth: auth,
-          handler: function(req) {
+          handler: function() {
+            var self = this;
 
-            checkPermissions(req, resource, 'views', function(err) {
+            checkPermissions.call(this, resource, ACTION_NAMES.view, function(err) {
               if (err) {
-                req.reply(updateErrorCode(err));
-                return;
+                return self.reply(updateErrorCode(err));
               }
-              resource.view(viewName, req.query, function(err, docs) {
-                if (err) req.reply(updateErrorCode(err));
-                else req.reply(docs);
+              resource.view(viewName, self.query, function(err, docs) {
+                if (err) self.reply(updateErrorCode(err));
+                else self.reply(docs);
               });
             });
           }
@@ -169,10 +181,11 @@ module.exports.register = function(plugin, options, next) {
     // Get the doc from the payload and set isMultipart when multipart data
     //
 
-    function parseSavePayload(req) {
-
-      var doc = req.payload;
-      var contentType = req.raw.req.headers['content-type'];
+    function parseSavePayload() {
+      // gets called with request as this
+      
+      var doc = this.payload;
+      var contentType = this.raw.req.headers['content-type'];
 
       if (contentType && contentType.indexOf('multipart/form-data') !== -1) {
 
@@ -192,7 +205,10 @@ module.exports.register = function(plugin, options, next) {
     // Handle the saving and reply
     //
     
-    function handleSave(req, doc) {
+    function handleSave(doc) {
+      // gets called with request as this
+      var self = this;
+      
       resource.save(doc, function(err, doc) {
 
         if (err) {
@@ -208,13 +224,13 @@ module.exports.register = function(plugin, options, next) {
               errors: err.errors
             };
             var contentType = 'application/json';
-            return req.reply(hapi.error.passThrough(err.code, payload, contentType));
+            return self.reply(hapi.error.passThrough(err.code, payload, contentType));
           }
 
-          return req.reply(updateErrorCode(err));
+          return self.reply(updateErrorCode(err));
         }
         
-        return req.reply(doc);
+        return self.reply(doc);
       });
     }
 
@@ -228,15 +244,15 @@ module.exports.register = function(plugin, options, next) {
       path: info.path,
       config: {
         auth: auth,
-        handler: function(req) {
-
-          checkPermissions(req, resource, 'save', function(err) {
+        handler: function() {
+          var self = this;
+          
+          checkPermissions.call(this, resource, ACTION_NAMES.create, function(err) {
             if (err) {
-              req.reply(updateErrorCode(err));
-              return;
+              return self.reply(updateErrorCode(err));
             }
-            var doc = parseSavePayload(req);
-            handleSave(req, doc);
+            var doc = parseSavePayload.call(self);
+            handleSave.call(self, doc);
           });
         }
       }
@@ -252,16 +268,24 @@ module.exports.register = function(plugin, options, next) {
       path: info.path + '/{id}',
       config: {
         auth: auth,
-        handler: function(req) {
+        handler: function() {
+          var self = this;
 
-          checkPermissions(req, resource, 'save', function(err) {
+          checkPermissions.call(this, resource, ACTION_NAMES.create, function(err) {
             if (err) {
-              req.reply(updateErrorCode(err));
-              return;
+              return self.reply(updateErrorCode(err));
             }
-            var doc = parseSavePayload(req);
-            doc._id = req.params.id;
-            handleSave(req, doc);
+            var doc = parseSavePayload.call(self);
+
+            if (doc._rev) {
+              // prevent update, updates should put to /{id}/{rev}
+              var err = new Error('Doc with _rev not allowed');
+              err.code = 400;
+              return self.reply(err);
+            }
+            
+            doc._id = self.params.id;
+            handleSave.call(self, doc);
           });
         }
       }
@@ -277,19 +301,19 @@ module.exports.register = function(plugin, options, next) {
       path: info.path + '/{id}/{rev}',
       config: {
         auth: auth,
-        handler: function(req) {
+        handler: function() {
+          var self = this;
 
-          checkPermissions(req, resource, 'save', function(err) {
+          checkPermissions.call(this, resource, ACTION_NAMES.update, function(err) {
             if (err) {
-              req.reply(updateErrorCode(err));
-              return;
+              return self.reply(updateErrorCode(err));
             }
-            var doc = parseSavePayload(req);
+            var doc = parseSavePayload.call(self);
 
-            doc._id = req.params.id;
-            doc._rev = req.params.rev;
+            doc._id = self.params.id;
+            doc._rev = self.params.rev;
 
-            handleSave(req, doc);
+            handleSave.call(self, doc);
           });
         }
       }
@@ -305,18 +329,18 @@ module.exports.register = function(plugin, options, next) {
       path: info.path + '/{id}/{rev}',
       config: {
         auth: auth,
-        handler: function(req) {
-
-          checkPermissions(req, resource, 'destroy', function(err) {
+        handler: function() {
+          var self = this;
+          
+          checkPermissions.call(this, resource, ACTION_NAMES.destroy, function(err) {
             if (err) {
-              req.reply(updateErrorCode(err));
-              return;
+              return self.reply(updateErrorCode(err));
             }
             resource.destroy(
-              { type_: name, _id: req.params.id, _rev: req.params.rev },
+              { type_: name, _id: self.params.id, _rev: self.params.rev },
               function(err) {
-                if (err) req.reply(updateErrorCode(err));
-                else req.reply();
+                if (err) self.reply(updateErrorCode(err));
+                else self.reply();
               });
           });
         }
@@ -334,8 +358,8 @@ module.exports.register = function(plugin, options, next) {
     path: basePath + '/_index',
     config: {
       auth: auth,
-      handler: function(req) {
-        req.reply(index);
+      handler: function() {
+        this.reply(index);
       }
     }
   });
@@ -350,11 +374,13 @@ module.exports.register = function(plugin, options, next) {
     path: basePath + '/_uuids',
     config: {
       auth: auth,
-      handler: function(req) {
-        var count = parseInt(req.query.count, 10) || 1;
+      handler: function() {
+        var self = this;
+        var count = parseInt(this.query.count, 10) || 1;
+
         cores.uuids(count, function(err, uuids) {
-          if (err) req.reply(updateErrorCode(err));
-          else req.reply(uuids);
+          if (err) self.reply(updateErrorCode(err));
+          else self.reply(uuids);
         });
       }
     }

@@ -385,15 +385,17 @@ describe('cores-hapi', function() {
 
       var authData = [
         { user: 'all', pass: 'all',
-          permissions: { load: true, save: true, destroy: true, views: true }},
+          permissions: { load: true, create: true, update: true, destroy: true, view: true }},
         { user: 'load', pass: 'load',
-          permissions: { load: true, save: false, destroy: false, views: false }},
-        { user: 'save', pass: 'save',
-          permissions: { load: false, save: true, destroy: false, views: false }},
+          permissions: { load: true, create: false, update: false, destroy: false, view: false }},
+        { user: 'create', pass: 'create',
+          permissions: { load: false, create: true, update: false, destroy: false, view: false }},
+        { user: 'update', pass: 'update',
+          permissions: { load: false, create: false, update: true, destroy: false, view: false }},
         { user: 'destroy', pass: 'destroy',
-          permissions: { load: false, save: false, destroy: true, views: false }},
+          permissions: { load: false, create: false, update: false, destroy: true, view: false }},
         { user: 'views', pass: 'views',
-          permissions: { load: false, save: false, destroy: true, views: true }},
+          permissions: { load: false, create: false, update: false, destroy: true, views: true }},
         { user: 'none', pass: 'none' }
       ];
 
@@ -431,8 +433,9 @@ describe('cores-hapi', function() {
 
         var cred = createCredentials(data.permissions);
         var shouldLoad = data.permissions && data.permissions.load;
-        var shouldView = data.permissions && data.permissions.views;
-        var shouldSave = data.permissions && data.permissions.save;
+        var shouldView = data.permissions && data.permissions.view;
+        var shouldCreate = data.permissions && data.permissions.create;
+        var shouldUpdate = data.permissions && data.permissions.update;
         var shouldDestroy = data.permissions && data.permissions.destroy;
 
         describe(data.user, function() {
@@ -470,35 +473,35 @@ describe('cores-hapi', function() {
             );
           });
 
-          it('should ' + (shouldSave ? '' : 'not ') + 'save', function(done) {
+          it('should ' + (shouldCreate ? '' : 'not ') + 'save', function(done) {
             var doc = JSON.parse(JSON.stringify(articleData));
             server.inject(
               { method: 'POST', url: '/articles',
                 payload: JSON.stringify(doc),
                 credentials: cred },
               function(res) {
-                if (shouldSave) assert(res.statusCode === 200);
-                else            assert(res.statusCode !== 200);
+                if (shouldCreate) assert(res.statusCode === 200);
+                else              assert(res.statusCode !== 200);
                 done();
               }
             );
           });
           
-          it('should ' + (shouldSave ? '' : 'not ') + 'save with id', function(done) {
+          it('should ' + (shouldCreate ? '' : 'not ') + 'save with id', function(done) {
             var doc = JSON.parse(JSON.stringify(articleData));
             server.inject(
               { method: 'PUT', url: '/articles/' + 'saved_' + (new Date().getTime()),
                 payload: JSON.stringify(doc),
                 credentials: cred },
               function(res) {
-                if (shouldSave) assert(res.statusCode === 200);
-                else            assert(res.statusCode !== 200);
+                if (shouldCreate) assert(res.statusCode === 200);
+                else              assert(res.statusCode !== 200);
                 done();
               }
             );
           });
           
-          it('should ' + (shouldSave ? '' : 'not ') + 'update', function(done) {
+          it('should ' + (shouldUpdate ? '' : 'not ') + 'update', function(done) {
             resources['Article'].load(articleId, function(err, doc) {
               assert(!err);
 
@@ -508,8 +511,8 @@ describe('cores-hapi', function() {
                   payload: JSON.stringify(doc),
                   credentials: cred },
                 function(res) {
-                  if (shouldSave) assert(res.statusCode === 200);
-                  else            assert(res.statusCode !== 200);
+                  if (shouldUpdate) assert(res.statusCode === 200);
+                  else              assert(res.statusCode !== 200);
                   done();
                 }
               );

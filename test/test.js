@@ -14,8 +14,6 @@ var articleData = require('./article-data.js');
 var imageData = require('./image-data.js');
 
 
-
-
 describe('cores-hapi', function() {
 
   var dbName = 'test-cores-hapi';
@@ -85,8 +83,6 @@ describe('cores-hapi', function() {
   
   describe('api', function() {
 
-    // var resources = null;
-
     var route = '/articles';
     var schemaRoute = '/articles/_schema';
     var viewRoute = '/articles/_views/titles';
@@ -95,9 +91,19 @@ describe('cores-hapi', function() {
     var docRev = null;
     var uuid = null;
 
+    var handler = function(request, resources, payload, callback) {
+      if (payload.isMultipart) {
+        callback(null, payload.doc);
+      }
+      else {
+        callback(null, payload);
+      }
+    };
+    var handlers = { Image: { create: handler, update: handler } };
+    
 
     before(function(done) {
-      startServer({}, done);
+      startServer({ handlers: handlers }, done);
     });
 
     after(stopServer);
@@ -385,17 +391,17 @@ describe('cores-hapi', function() {
 
       var authData = [
         { user: 'all', pass: 'all',
-          permissions: { load: true, create: true, update: true, destroy: true, view: true }},
+          permissions: { load: true, create: true, update: true, destroy: true, views: true }},
         { user: 'load', pass: 'load',
-          permissions: { load: true, create: false, update: false, destroy: false, view: false }},
+          permissions: { load: true, create: false, update: false, destroy: false, views: false }},
         { user: 'create', pass: 'create',
-          permissions: { load: false, create: true, update: false, destroy: false, view: false }},
+          permissions: { load: false, create: true, update: false, destroy: false, views: false }},
         { user: 'update', pass: 'update',
-          permissions: { load: false, create: false, update: true, destroy: false, view: false }},
+          permissions: { load: false, create: false, update: true, destroy: false, views: false }},
         { user: 'destroy', pass: 'destroy',
-          permissions: { load: false, create: false, update: false, destroy: true, view: false }},
+          permissions: { load: false, create: false, update: false, destroy: true, views: false }},
         { user: 'views', pass: 'views',
-          permissions: { load: false, create: false, update: false, destroy: true, views: true }},
+          permissions: { load: false, create: false, update: false, destroy: true, viewss: true }},
         { user: 'none', pass: 'none' }
       ];
 
@@ -433,7 +439,7 @@ describe('cores-hapi', function() {
 
         var cred = createCredentials(data.permissions);
         var shouldLoad = data.permissions && data.permissions.load;
-        var shouldView = data.permissions && data.permissions.view;
+        var shouldView = data.permissions && data.permissions.views;
         var shouldCreate = data.permissions && data.permissions.create;
         var shouldUpdate = data.permissions && data.permissions.update;
         var shouldDestroy = data.permissions && data.permissions.destroy;
@@ -537,6 +543,152 @@ describe('cores-hapi', function() {
     });
   });
 
+  
+  describe('handlers', function() {
+
+    var articleDoc;
+    var handlerCalls = {};
+    var handlers = { Article: {
+      load: function(request, resource, doc, callback) {
+        handlerCalls.load = true;
+        callback(null, doc);
+      },
+
+      create: function(request, resource, doc, callback) {
+        handlerCalls.create = true;
+        callback(null, doc);
+      },
+
+      update: function(request, resource, doc, callback) {
+        handlerCalls.update = true;
+        callback(null, doc);
+      },
+
+      destroy: function(request, resource, callback) {
+        handlerCalls.destroy = true;
+        callback(null);
+      },
+      
+      views: {
+        titles: function(request, resource, result, callback) {
+          handlerCalls.views = true;
+          callback(null, result);
+        }
+      },
+      
+      all: function(request, resource, result, callback) {
+        handlerCalls.all = true;
+        callback(null, result);
+      }
+    }};
+
+
+    before(function(done) {
+      startServer({ handlers: handlers }, done);
+    });
+
+    after(stopServer);
+    
+    
+    it('should call the create handler on POST', function(done) {
+      var doc = JSON.parse(JSON.stringify(articleData));
+      server.inject(
+        { method: 'POST', url: '/articles', payload: JSON.stringify(doc) },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(handlerCalls.create);
+          handlerCalls.create = false;
+
+          articleDoc = res.result;
+
+          done();
+        }
+      );
+    });
+
+    
+    it('should call the create handler on PUT/id', function(done) {
+      var doc = JSON.parse(JSON.stringify(articleData));
+      server.inject(
+        { method: 'PUT', url: '/articles/handler_test', payload: JSON.stringify(doc) },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(handlerCalls.create);
+          handlerCalls.create = false;
+          done();
+        }
+      );
+    });
+
+    
+    it('should call the update handler on PUT/id/rev', function(done) {
+      server.inject(
+        { method: 'PUT', url: '/articles/' + articleDoc._id + '/' + articleDoc._rev, payload: JSON.stringify(articleDoc) },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(handlerCalls.update);
+          handlerCalls.update = false;
+
+          articleDoc = res.result;
+          
+          done();
+        }
+      );
+    });
+
+
+    it('should call the load handler on GET/id', function(done) {
+      server.inject(
+        { method: 'GET', url: '/articles/' + articleDoc._id },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(handlerCalls.load);
+          handlerCalls.load = false;
+          done();
+        }
+      );
+    });
+
+    
+    it('should call the view handler on GET/view', function(done) {
+      server.inject(
+        { method: 'GET', url: '/articles/_views/titles' },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(handlerCalls.views);
+          handlerCalls.views = false;
+          done();
+        }
+      );
+    });
+    
+
+    it('should call the destroy handler on DELETE/id/rev', function(done) {
+      server.inject(
+        { method: 'DELETE', url: '/articles/' + articleDoc._id + '/' + articleDoc._rev },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(handlerCalls.destroy);
+          handlerCalls.destroy = false;
+          done();
+        }
+      );
+    });
+
+
+    it('should call the all handler on GET', function(done) {
+      server.inject(
+        { method: 'GET', url: '/articles' },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(handlerCalls.all);
+          handlerCalls.all = false;
+          done();
+        }
+      );
+    });
+  });
+  
 
   describe('api with auth', function() {
 

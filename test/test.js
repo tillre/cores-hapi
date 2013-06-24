@@ -457,11 +457,11 @@ describe('cores-hapi', function() {
             );
           });
 
-          it('should ' + (shouldLoad ? '' : 'not ') + 'view all', function(done) {
+          it('should ' + (shouldView ? '' : 'not ') + 'view all', function(done) {
             server.inject(
               { method: 'GET', url: '/articles', credentials: cred },
               function(res) {
-                if (shouldLoad) assert(res.statusCode === 200);
+                if (shouldView) assert(res.statusCode === 200);
                 else            assert(res.statusCode !== 200);
                 done();
               }
@@ -574,11 +574,6 @@ describe('cores-hapi', function() {
           handlerCalls.views = true;
           callback(null, result);
         }
-      },
-      
-      all: function(request, resource, result, callback) {
-        handlerCalls.all = true;
-        callback(null, result);
       }
     }};
 
@@ -670,19 +665,6 @@ describe('cores-hapi', function() {
           assert(res.statusCode === 200);
           assert(handlerCalls.destroy);
           handlerCalls.destroy = false;
-          done();
-        }
-      );
-    });
-
-
-    it('should call the all handler on GET', function(done) {
-      server.inject(
-        { method: 'GET', url: '/articles' },
-        function(res) {
-          assert(res.statusCode === 200);
-          assert(handlerCalls.all);
-          handlerCalls.all = false;
           done();
         }
       );

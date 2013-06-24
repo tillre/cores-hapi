@@ -10,8 +10,7 @@ var ACTIONS = {
   create: 'create',
   update: 'update',
   destroy: 'destroy',
-  views: 'views',
-  all: 'all'
+  views: 'views'
 };
 
 
@@ -65,7 +64,7 @@ module.exports.register = function(plugin, options, next) {
     });
 
     //
-    // GET all
+    // GET all, alias for 'all' view
     //
     
     plugin.route({
@@ -73,7 +72,7 @@ module.exports.register = function(plugin, options, next) {
       path: info.path,
       config: {
         auth: config.auth,
-        handler: routeHandlers.getAll
+        handler: routeHandlers.getView('all', viewHandlers['all'])
       }
     });
 

@@ -457,7 +457,7 @@ describe('cores-hapi', function() {
             );
           });
 
-          it('should ' + (shouldLoad ? '' : 'not ') + 'load all', function(done) {
+          it('should ' + (shouldLoad ? '' : 'not ') + 'view all', function(done) {
             server.inject(
               { method: 'GET', url: '/articles', credentials: cred },
               function(res) {

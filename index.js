@@ -1,4 +1,3 @@
-var _ = require('underscore');
 var i = require('i')();
 var hapi = require('hapi');
 var walk = require('walk-fs');
@@ -15,13 +14,6 @@ var ACTIONS = {
 };
 
 
-function camelize(str) {
-  return str.replace(/(^\w)|(\-\w)/g, function(m) {
-    return m.slice(-1).toUpperCase();
-  });
-};
-
-
 function loadHandlers(dir, callback) {
 
   var handlers = {};
@@ -34,7 +26,7 @@ function loadHandlers(dir, callback) {
       if (m) {
         var name = m[1].toLowerCase();
         var type = m[2].toLowerCase();
-        var cname = camelize(name);
+        var cname = i.camelize(name);
         handlers[cname] = require(path);
       }
     }
@@ -62,8 +54,10 @@ function createApi(plugin, options, next) {
   // index listing all model routes
   var index = {};
 
-  _.each(resources, function(resource, name) {
+  // _.each(resources, function(resource, name) {
+  Object.keys(resources).forEach(function(name) {
 
+    var resource = resources[name];
     var handlers = config.handlers[name] || {};
     var viewHandlers = handlers[ACTIONS.views] || {};
     var path = config.basePath + '/' + i.pluralize(name.toLowerCase());
@@ -121,7 +115,7 @@ function createApi(plugin, options, next) {
     // GET views
     //
     
-    _.each(resource.design.views, function(view, viewName) {
+    Object.keys(resource.design.views).forEach(function(viewName) {
 
       var path = info.viewPaths[viewName] = info.path + '/_views/' + viewName;
       if (!path) {

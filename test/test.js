@@ -670,6 +670,28 @@ describe('cores-hapi', function() {
       );
     });
   });
+
+
+  describe('handlers in files', function() {
+
+    before(function(done) {
+      startServer({ handlers: __dirname }, done);
+    });
+
+    after(stopServer);
+
+    it('should have loaded the handlers', function(done) {
+      var doc = JSON.parse(JSON.stringify(articleData));
+      server.inject(
+        { method: 'POST', url: '/articles', payload: JSON.stringify(doc) },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(res.result.createdHandler);
+          done();
+        }
+      );
+    });
+  });
   
 
   describe('api with auth', function() {

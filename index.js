@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var i = require('i')();
 var hapi = require('hapi');
+var walk = require('walk-fs');
 
 var createResourceHandlers = require('./lib/resource-handlers.js');
 
@@ -14,12 +15,39 @@ var ACTIONS = {
 };
 
 
-module.exports.register = function(plugin, options, next) {
+function camelize(str) {
+  return str.replace(/(^\w)|(\-\w)/g, function(m) {
+    return m.slice(-1).toUpperCase();
+  });
+};
 
-  if (typeof plugin.route !== 'function') {
-    return next(new Error('Plugin requires route permission'));
-  };
 
+function loadHandlers(dir, callback) {
+
+  var handlers = {};
+  var re = /([\w\-]+)-(handlers)\.js$/i;
+
+  walk(dir, function(path, stats) {
+
+    if (stats.isFile()) {
+      var m = path.match(re);
+      if (m) {
+        var name = m[1].toLowerCase();
+        var type = m[2].toLowerCase();
+        var cname = camelize(name);
+        handlers[cname] = require(path);
+      }
+    }
+  }, function(err) {
+
+    if (err) callback(err);
+    else callback(null, handlers);
+  });
+}
+
+
+function createApi(plugin, options, next) {
+  
   // these need to be provided
   var cores = options.cores;
   var resources = options.resources;
@@ -200,5 +228,30 @@ module.exports.register = function(plugin, options, next) {
   });
 
   next();
+}
+
+//
+// exports
+//
+
+module.exports.register = function(plugin, options, next) {
+
+  if (typeof plugin.route !== 'function') {
+    return next(new Error('Plugin requires route permission'));
+  };
+
+  if (typeof options.handlers === 'string') {
+    // load handlers
+    loadHandlers(options.handlers, function(err, handlers) {
+      if (err) return next(err);
+
+      options.handlers = handlers;
+      createApi(plugin, options, next);
+    });
+  }
+  else {
+    createApi(plugin, options, next);
+  }
 };
+
 

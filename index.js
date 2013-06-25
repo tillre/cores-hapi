@@ -167,7 +167,7 @@ function createApi(plugin, options, next) {
       path: info.path + '/{id}/{rev}',
       config: {
         auth: config.auth,
-        handler: routeHandlers.updateWithId
+        handler: routeHandlers.update
       }
     });
 

@@ -1,6 +1,6 @@
 {
   "name": "cores-hapi",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Hapi plugin that creates an api for cores resources",
   "main": "index.js",
   "scripts": {

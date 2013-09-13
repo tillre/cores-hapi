@@ -9,8 +9,13 @@ var nano = require('nano')('http://localhost:5984');
 var request = require('request');
 var coresHapi = require('../index.js');
 
-
+// resources
+var articleDesign = require('./article-design.js');
+var articleSchema = require('./article-schema.js');
 var articleData = require('./article-data.js');
+
+var imageDesign = require('./image-design.js');
+var imageSchema = require('./image-schema.js');
 var imageData = require('./image-data.js');
 
 
@@ -38,15 +43,20 @@ describe('cores-hapi', function() {
     }
 
     options.cores = cores;
-    cores.load('./test', function(err, res) {
-      assert(!err);
+    resources = options.resources = {};
 
-      resources = res;
-      options.resources = resources;
+    cores.create('Article', { schema: articleSchema, design: articleDesign }, function(err, res) {
+      if (err) return done(err);
+      options.resources.Article = res;
 
-      server.pack.require('../', options, function(err) {
-        assert(!err);
-        server.start(done);
+      cores.create('Image', { schema: imageSchema, design: imageDesign }, function(err, res) {
+        if (err) return done(err);
+        options.resources.Image = res;
+
+        server.pack.require('../', options, function(err) {
+          assert(!err);
+          server.start(done);
+        });
       });
     });
   };
@@ -99,7 +109,7 @@ describe('cores-hapi', function() {
         callback(null, payload);
       }
     };
-    var handlers = { Image: { create: handler, update: handler } };
+    var handlers = { create: handler, update: handler };
 
 
     before(function(done) {
@@ -548,7 +558,7 @@ describe('cores-hapi', function() {
 
     var articleDoc;
     var handlerCalls = {};
-    var handlers = { Article: {
+    var handlers = {
       load: function(request, resource, doc, callback) {
         handlerCalls.load = true;
         callback(null, doc);
@@ -569,13 +579,11 @@ describe('cores-hapi', function() {
         callback(null);
       },
 
-      views: {
-        titles: function(request, resource, result, callback) {
-          handlerCalls.views = true;
-          callback(null, result);
-        }
+      views: function(request, resource, result, callback) {
+        handlerCalls.views = true;
+        callback(null, result);
       }
-    }};
+    };
 
 
     before(function(done) {
@@ -665,28 +673,6 @@ describe('cores-hapi', function() {
           assert(res.statusCode === 200);
           assert(handlerCalls.destroy);
           handlerCalls.destroy = false;
-          done();
-        }
-      );
-    });
-  });
-
-
-  describe('handlers in files', function() {
-
-    before(function(done) {
-      startServer({ handlers: __dirname }, done);
-    });
-
-    after(stopServer);
-
-    it('should have loaded the handlers', function(done) {
-      var doc = JSON.parse(JSON.stringify(articleData));
-      server.inject(
-        { method: 'POST', url: '/articles', payload: JSON.stringify(doc) },
-        function(res) {
-          assert(res.statusCode === 200);
-          assert(res.result.createdHandler);
           done();
         }
       );

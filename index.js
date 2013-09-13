@@ -1,8 +1,8 @@
 var i = require('i')();
 var hapi = require('hapi');
-var walk = require('walk-fs');
 
-var createResourceHandlers = require('./lib/resource-handlers.js');
+var updateErrorCode = require('./lib/update-error-code.js');
+var createHandlers = require('./lib/create-handlers.js');
 
 
 var ACTIONS = {
@@ -12,30 +12,6 @@ var ACTIONS = {
   destroy: 'destroy',
   views: 'views'
 };
-
-
-function loadHandlers(dir, callback) {
-
-  var handlers = {};
-  var re = /([\w\-]+)-(handlers)\.js$/i;
-
-  walk(dir, function(path, stats) {
-
-    if (stats.isFile()) {
-      var m = path.match(re);
-      if (m) {
-        var name = m[1].toLowerCase();
-        var type = m[2].toLowerCase();
-        var cname = i.camelize(name);
-        handlers[cname] = require(path);
-      }
-    }
-  }, function(err) {
-
-    if (err) callback(err);
-    else callback(null, handlers);
-  });
-}
 
 
 function createApi(plugin, options, next) {
@@ -57,11 +33,12 @@ function createApi(plugin, options, next) {
   Object.keys(resources).forEach(function(name) {
 
     var resource = resources[name];
-    var handlers = config.handlers[name] || {};
-    var viewHandlers = handlers[ACTIONS.views] || {};
+    // var handlers = config.handlers[name] || {};
+    var handlers = config.handlers;
+    // var viewHandlers = handlers[ACTIONS.views] || {};
     var path = config.basePath + '/' + i.pluralize(name.toLowerCase());
 
-    var routeHandlers = createResourceHandlers(ACTIONS, resource, name, handlers);
+    var routeHandlers = createHandlers(ACTIONS, resource, name, handlers);
 
     // index entry
     var info = index[name] = {
@@ -74,7 +51,6 @@ function createApi(plugin, options, next) {
     //
     // GET schema
     //
-
     plugin.route({
       method: 'GET',
       path: info.schemaPath,
@@ -87,20 +63,18 @@ function createApi(plugin, options, next) {
     //
     // GET all, alias for 'all' view
     //
-
     plugin.route({
       method: 'GET',
       path: info.path,
       config: {
         auth: config.auth,
-        handler: routeHandlers.getView('all', viewHandlers['all'])
+        handler: routeHandlers.getView('all')
       }
     });
 
     //
     // GET by id
     //
-
     plugin.route({
       method: 'GET',
       path: info.path + '/{id}',
@@ -113,7 +87,6 @@ function createApi(plugin, options, next) {
     //
     // GET views
     //
-
     Object.keys(resource.design.views).forEach(function(viewName) {
 
       var path = info.viewPaths[viewName] = info.path + '/_views/' + viewName;
@@ -126,7 +99,7 @@ function createApi(plugin, options, next) {
         path: path,
         config: {
           auth: config.auth,
-          handler: routeHandlers.getView(viewName, viewHandlers[viewName])
+          handler: routeHandlers.getView(viewName)
         }
       });
     });
@@ -134,7 +107,6 @@ function createApi(plugin, options, next) {
     //
     // POST
     //
-
     plugin.route({
       method: 'POST',
       path: info.path,
@@ -147,7 +119,6 @@ function createApi(plugin, options, next) {
     //
     // PUT id
     //
-
     plugin.route({
       method: 'PUT',
       path: info.path + '/{id}',
@@ -160,7 +131,6 @@ function createApi(plugin, options, next) {
     //
     // PUT id/rev
     //
-
     plugin.route({
       method: 'PUT',
       path: info.path + '/{id}/{rev}',
@@ -173,7 +143,6 @@ function createApi(plugin, options, next) {
     //
     // DELETE
     //
-
     plugin.route({
       method: 'DELETE',
       path: info.path + '/{id}/{rev}',
@@ -187,7 +156,6 @@ function createApi(plugin, options, next) {
   //
   // GET models/route index
   //
-
   plugin.route({
     method: 'GET',
     path: config.basePath + '/_index',
@@ -202,7 +170,6 @@ function createApi(plugin, options, next) {
   //
   // GET uuids
   //
-
   plugin.route({
     method: 'GET',
     path: config.basePath + '/_uuids',
@@ -232,17 +199,5 @@ module.exports.register = function(plugin, options, next) {
   if (typeof plugin.route !== 'function') {
     return next(new Error('Plugin requires route permission'));
   };
-
-  if (typeof options.handlers === 'string') {
-    // load handlers
-    loadHandlers(options.handlers, function(err, handlers) {
-      if (err) return next(err);
-
-      options.handlers = handlers;
-      createApi(plugin, options, next);
-    });
-  }
-  else {
-    createApi(plugin, options, next);
-  }
+  createApi(plugin, options, next);
 };

@@ -23,7 +23,7 @@ describe('cores-hapi', function() {
   var server;
   var resources;
 
-  
+
   var startServer = function(options, done) {
 
     server = new hapi.Server('0.0.0.0', 3333);
@@ -35,7 +35,7 @@ describe('cores-hapi', function() {
           callback(new Error('Auth failed'));
         }
       });
-    }      
+    }
 
     options.cores = cores;
     cores.load('./test', function(err, res) {
@@ -43,7 +43,7 @@ describe('cores-hapi', function() {
 
       resources = res;
       options.resources = resources;
-      
+
       server.pack.require('../', options, function(err) {
         assert(!err);
         server.start(done);
@@ -51,12 +51,12 @@ describe('cores-hapi', function() {
     });
   };
 
-  
+
   var stopServer = function(done) {
     server.stop(done);
   };
 
-  
+
   before(function(done) {
     // setup test db
     nano.db.get(dbName, function(err, body) {
@@ -75,12 +75,12 @@ describe('cores-hapi', function() {
     });
   });
 
-  
+
   after(function(done) {
     nano.db.destroy(dbName, done);
   });
 
-  
+
   describe('api', function() {
 
     var route = '/articles';
@@ -100,14 +100,14 @@ describe('cores-hapi', function() {
       }
     };
     var handlers = { Image: { create: handler, update: handler } };
-    
+
 
     before(function(done) {
       startServer({ handlers: handlers }, done);
     });
 
     after(stopServer);
-    
+
 
     it('should GET the index', function(done) {
       server.inject(
@@ -134,7 +134,7 @@ describe('cores-hapi', function() {
           assert(res.result.uuids.length === 1);
 
           uuid = res.result.uuids[0];
-          
+
           done();
         }
       );
@@ -150,7 +150,7 @@ describe('cores-hapi', function() {
         }
       );
     });
-    
+
     it('should GET the schema', function(done) {
       server.inject(
         { method: 'GET', url: schemaRoute },
@@ -162,14 +162,14 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should POST', function(done) {
       server.inject(
         { method: 'POST', url: route, payload: JSON.stringify(articleData) },
         function(res) {
           assert(res.statusCode === 200);
           assert(res.result.type_ === 'Article');
-          
+
           docId = res.result._id;
           docRev = res.result._rev;
           done();
@@ -177,7 +177,7 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should POST another article doc', function(done) {
       server.inject(
         { method: 'POST', url: route, payload: JSON.stringify(articleData) },
@@ -188,7 +188,7 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should return errors when POST not validating', function(done) {
       server.inject(
         { method: 'POST', url: route, payload: JSON.stringify({title:42}) },
@@ -200,10 +200,10 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should POST multipart', function(done) {
       var file = fs.createReadStream(__dirname + '/test.jpg');
-      
+
       var r = request.post('http://localhost:3333/images', function(err, res) {
         assert(!err);
         assert(res.statusCode === 200);
@@ -213,7 +213,7 @@ describe('cores-hapi', function() {
         assert(typeof d._id === 'string');
         assert(typeof d._rev === 'string');
         assert(d.type_ === 'Image');
-        
+
         done();
       });
 
@@ -245,8 +245,8 @@ describe('cores-hapi', function() {
         }
       );
     });
-    
-    
+
+
     it('should GET', function(done) {
       server.inject(
         { method: 'GET', url: route + '/' + docId },
@@ -259,7 +259,7 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should not GET nonexistant', function(done) {
       server.inject(
         { method: 'GET', url: route + '/asdasd'},
@@ -270,7 +270,7 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should GET the view', function(done) {
       server.inject(
         { method: 'GET', url: viewRoute },
@@ -282,7 +282,7 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should GET the view with params', function(done) {
       server.inject(
         { method: 'GET', url: viewRoute + '?limit=1' },
@@ -307,13 +307,13 @@ describe('cores-hapi', function() {
         }
       );
     });
-    
+
     it('should PUT with id and rev', function(done) {
       server.inject(
         { method: 'PUT', url: route + '/' + docId + '/' + docRev, payload: JSON.stringify(articleData) },
         function(res) {
           assert(res.statusCode === 200);
-          
+
           var d = res.result;
           assert(d.type_ === 'Article');
           assert(d._id === docId);
@@ -336,10 +336,10 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should PUT multipart', function(done) {
       var file = fs.createReadStream(__dirname + '/test.jpg');
-      
+
       var r = request.put('http://localhost:3333/images/' + docId + '/' + docRev, function(err, res) {
         assert(!err);
         assert(res.statusCode === 200);
@@ -349,7 +349,7 @@ describe('cores-hapi', function() {
         assert(typeof d._id === 'string');
         assert(typeof d._rev === 'string');
         assert(d.type_ === 'Image');
-        
+
         done();
       });
 
@@ -415,7 +415,7 @@ describe('cores-hapi', function() {
         }
         return ps;
       };
-      
+
       var articleId = 'auth_article';
 
       beforeEach(function(done) {
@@ -434,7 +434,7 @@ describe('cores-hapi', function() {
         });
       });
 
-      
+
       authData.forEach(function(data) {
 
         var cred = createCredentials(data.permissions);
@@ -445,7 +445,7 @@ describe('cores-hapi', function() {
         var shouldDestroy = data.permissions && data.permissions.destroy;
 
         describe(data.user, function() {
-        
+
           it('should ' + (shouldLoad ? '' : 'not ') + 'load single', function(done) {
             server.inject(
               { method: 'GET', url: '/articles/' + articleId, credentials: cred },
@@ -467,7 +467,7 @@ describe('cores-hapi', function() {
               }
             );
           });
-          
+
           it('should ' + (shouldView ? '' : 'not ') + 'call view', function(done) {
             server.inject(
               { method: 'GET', url: '/articles/_views/titles', credentials: cred },
@@ -492,7 +492,7 @@ describe('cores-hapi', function() {
               }
             );
           });
-          
+
           it('should ' + (shouldCreate ? '' : 'not ') + 'save with id', function(done) {
             var doc = JSON.parse(JSON.stringify(articleData));
             server.inject(
@@ -506,7 +506,7 @@ describe('cores-hapi', function() {
               }
             );
           });
-          
+
           it('should ' + (shouldUpdate ? '' : 'not ') + 'update', function(done) {
             resources['Article'].load(articleId, function(err, doc) {
               assert(!err);
@@ -543,7 +543,7 @@ describe('cores-hapi', function() {
     });
   });
 
-  
+
   describe('handlers', function() {
 
     var articleDoc;
@@ -564,11 +564,11 @@ describe('cores-hapi', function() {
         callback(null, doc);
       },
 
-      destroy: function(request, resource, callback) {
+      destroy: function(request, resource, docId, callback) {
         handlerCalls.destroy = true;
         callback(null);
       },
-      
+
       views: {
         titles: function(request, resource, result, callback) {
           handlerCalls.views = true;
@@ -583,8 +583,8 @@ describe('cores-hapi', function() {
     });
 
     after(stopServer);
-    
-    
+
+
     it('should call the create handler on POST', function(done) {
       var doc = JSON.parse(JSON.stringify(articleData));
       server.inject(
@@ -601,7 +601,7 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should call the create handler on PUT/id', function(done) {
       var doc = JSON.parse(JSON.stringify(articleData));
       server.inject(
@@ -615,7 +615,7 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should call the update handler on PUT/id/rev', function(done) {
       server.inject(
         { method: 'PUT', url: '/articles/' + articleDoc._id + '/' + articleDoc._rev, payload: JSON.stringify(articleDoc) },
@@ -625,7 +625,7 @@ describe('cores-hapi', function() {
           handlerCalls.update = false;
 
           articleDoc = res.result;
-          
+
           done();
         }
       );
@@ -644,7 +644,7 @@ describe('cores-hapi', function() {
       );
     });
 
-    
+
     it('should call the view handler on GET/view', function(done) {
       server.inject(
         { method: 'GET', url: '/articles/_views/titles' },
@@ -656,7 +656,7 @@ describe('cores-hapi', function() {
         }
       );
     });
-    
+
 
     it('should call the destroy handler on DELETE/id/rev', function(done) {
       server.inject(
@@ -692,7 +692,7 @@ describe('cores-hapi', function() {
       );
     });
   });
-  
+
 
   describe('api with auth', function() {
 

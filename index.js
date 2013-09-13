@@ -39,7 +39,7 @@ function loadHandlers(dir, callback) {
 
 
 function createApi(plugin, options, next) {
-  
+
   // these need to be provided
   var cores = options.cores;
   var resources = options.resources;
@@ -54,7 +54,6 @@ function createApi(plugin, options, next) {
   // index listing all model routes
   var index = {};
 
-  // _.each(resources, function(resource, name) {
   Object.keys(resources).forEach(function(name) {
 
     var resource = resources[name];
@@ -63,7 +62,7 @@ function createApi(plugin, options, next) {
     var path = config.basePath + '/' + i.pluralize(name.toLowerCase());
 
     var routeHandlers = createResourceHandlers(ACTIONS, resource, name, handlers);
-    
+
     // index entry
     var info = index[name] = {
       type: name,
@@ -75,7 +74,7 @@ function createApi(plugin, options, next) {
     //
     // GET schema
     //
-    
+
     plugin.route({
       method: 'GET',
       path: info.schemaPath,
@@ -88,7 +87,7 @@ function createApi(plugin, options, next) {
     //
     // GET all, alias for 'all' view
     //
-    
+
     plugin.route({
       method: 'GET',
       path: info.path,
@@ -101,7 +100,7 @@ function createApi(plugin, options, next) {
     //
     // GET by id
     //
-    
+
     plugin.route({
       method: 'GET',
       path: info.path + '/{id}',
@@ -114,7 +113,7 @@ function createApi(plugin, options, next) {
     //
     // GET views
     //
-    
+
     Object.keys(resource.design.views).forEach(function(viewName) {
 
       var path = info.viewPaths[viewName] = info.path + '/_views/' + viewName;
@@ -135,7 +134,7 @@ function createApi(plugin, options, next) {
     //
     // POST
     //
-    
+
     plugin.route({
       method: 'POST',
       path: info.path,
@@ -161,7 +160,7 @@ function createApi(plugin, options, next) {
     //
     // PUT id/rev
     //
-    
+
     plugin.route({
       method: 'PUT',
       path: info.path + '/{id}/{rev}',
@@ -174,7 +173,7 @@ function createApi(plugin, options, next) {
     //
     // DELETE
     //
-    
+
     plugin.route({
       method: 'DELETE',
       path: info.path + '/{id}/{rev}',
@@ -188,7 +187,7 @@ function createApi(plugin, options, next) {
   //
   // GET models/route index
   //
-  
+
   plugin.route({
     method: 'GET',
     path: config.basePath + '/_index',
@@ -247,5 +246,3 @@ module.exports.register = function(plugin, options, next) {
     createApi(plugin, options, next);
   }
 };
-
-

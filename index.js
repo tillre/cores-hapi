@@ -33,9 +33,7 @@ function createApi(plugin, options, next) {
   Object.keys(resources).forEach(function(name) {
 
     var resource = resources[name];
-    // var handlers = config.handlers[name] || {};
     var handlers = config.handlers;
-    // var viewHandlers = handlers[ACTIONS.views] || {};
     var path = config.basePath + '/' + i.pluralize(name.toLowerCase());
 
     var routeHandlers = createHandlers(ACTIONS, resource, name, handlers);
@@ -179,9 +177,10 @@ function createApi(plugin, options, next) {
         var self = this;
         var count = parseInt(this.query.count, 10) || 1;
 
-        cores.uuids(count, function(err, uuids) {
-          if (err) self.reply(updateErrorCode(err));
-          else self.reply(uuids);
+        cores.uuids(count).then(function(uuids) {
+          self.reply(uuids);
+        }, function(err) {
+          self.reply(updateErrorCode(err));
         });
       }
     }

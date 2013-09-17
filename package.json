@@ -1,6 +1,6 @@
 {
   "name": "cores-hapi",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Hapi plugin that creates an api for cores resources",
   "main": "index.js",
   "scripts": {
@@ -28,7 +28,8 @@
   "dependencies": {
     "i": "~0.3.1",
     "hapi": "~1.x.x",
-    "cores": "~0.3.1"
+    "cores": "~0.4.0",
+    "kew": "~0.1.7"
   },
   "devDependencies": {
     "nano": "3.x.x",

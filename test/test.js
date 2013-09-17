@@ -7,6 +7,7 @@ var util = require('util');
 var hapi = require('hapi');
 var nano = require('nano')('http://localhost:5984');
 var request = require('request');
+var Q = require('kew');
 var coresHapi = require('../index.js');
 
 // resources
@@ -45,20 +46,19 @@ describe('cores-hapi', function() {
     options.cores = cores;
     resources = options.resources = {};
 
-    cores.create('Article', { schema: articleSchema, design: articleDesign }, function(err, res) {
-      if (err) return done(err);
+    cores.create('Article', { schema: articleSchema, design: articleDesign }).then(function(res) {
       options.resources.Article = res;
+      return cores.create('Image', { schema: imageSchema, design: imageDesign });
 
-      cores.create('Image', { schema: imageSchema, design: imageDesign }, function(err, res) {
-        if (err) return done(err);
-        options.resources.Image = res;
+    }).then(function(res) {
+      options.resources.Image = res;
 
-        server.pack.require('../', options, function(err) {
-          assert(!err);
-          server.start(done);
-        });
+      server.pack.require('../', options, function(err) {
+        assert(!err);
+        server.start(done);
       });
-    });
+
+    }).fail(done);
   };
 
 
@@ -101,12 +101,12 @@ describe('cores-hapi', function() {
     var docRev = null;
     var uuid = null;
 
-    var handler = function(request, resources, payload, callback) {
+    var handler = function(request, resources, payload) {
       if (payload.isMultipart) {
-        callback(null, payload.doc);
+        return Q.resolve(payload.doc);
       }
       else {
-        callback(null, payload);
+        return Q.resolve(payload);
       }
     };
     var handlers = { create: handler, update: handler };
@@ -429,17 +429,16 @@ describe('cores-hapi', function() {
       var articleId = 'auth_article';
 
       beforeEach(function(done) {
-        // make sure dummy article exists before each test
-        resources['Article'].load(articleId, function(err) {
-          if (err && err.error === 'not_found') {
+        // make sure dummy article exists
+        resources.Article.load(articleId).then(function() {
+          done();
+        }, function(err) {
+          if (err.error === 'not_found') {
             var d = JSON.parse(JSON.stringify(articleData));
             d._id = articleId;
-            resources['Article'].save(d, function(err) {
-              done(err);
-            });
-          }
-          else {
-            done(err);
+            resources.Article.save(d).then(function(doc) {
+              done();
+            }, done);
           }
         });
       });
@@ -533,11 +532,23 @@ describe('cores-hapi', function() {
                 }
               );
             });
+            resources.Article.load(articleId).then(function(doc) {
+              doc.title = 'Hello Auth';
+              server.inject(
+                { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
+                  payload: JSON.stringify(doc),
+                  credentials: cred },
+                function(res) {
+                  if (shouldUpdate) assert(res.statusCode === 200);
+                  else              assert(res.statusCode !== 200);
+                  done();
+                }
+              );
+            }, done);
           });
 
           it('should ' + (shouldDestroy ? '' : 'not ') + 'destroy', function(done) {
-            resources['Article'].load(articleId, function(err, doc) {
-              assert(!err);
+            resources.Article.load(articleId).then(function(doc) {
               server.inject(
                 { method: 'DELETE', url: '/articles/' + doc._id + '/' + doc._rev, credentials: cred },
                 function(res) {
@@ -546,7 +557,7 @@ describe('cores-hapi', function() {
                   done();
                 }
               );
-            });
+            }, done);
           });
         });
       });
@@ -559,29 +570,29 @@ describe('cores-hapi', function() {
     var articleDoc;
     var handlerCalls = {};
     var handlers = {
-      load: function(request, resource, doc, callback) {
+      load: function(request, resource, doc) {
         handlerCalls.load = true;
-        callback(null, doc);
+        return Q.resolve(doc);
       },
 
-      create: function(request, resource, doc, callback) {
+      create: function(request, resource, doc) {
         handlerCalls.create = true;
-        callback(null, doc);
+        return Q.resolve(doc);
       },
 
-      update: function(request, resource, doc, callback) {
+      update: function(request, resource, doc) {
         handlerCalls.update = true;
-        callback(null, doc);
+        return Q.resolve(doc);
       },
 
-      destroy: function(request, resource, docId, callback) {
+      destroy: function(request, resource, docId) {
         handlerCalls.destroy = true;
-        callback(null);
+        return Q.resolve(docId);
       },
 
-      views: function(request, resource, result, callback) {
+      views: function(request, resource, result) {
         handlerCalls.views = true;
-        callback(null, result);
+        return Q.resolve(result);
       }
     };
 

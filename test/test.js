@@ -20,6 +20,11 @@ var imageSchema = require('./image-schema.js');
 var imageData = require('./image-data.js');
 
 
+function clone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+
 describe('cores-hapi', function() {
 
   var dbName = 'test-cores-hapi';
@@ -98,6 +103,7 @@ describe('cores-hapi', function() {
     var viewRoute = '/articles/_views/titles';
 
     var docId = null;
+    var doc2Id = null;
     var docRev = null;
     var uuid = null;
 
@@ -188,11 +194,15 @@ describe('cores-hapi', function() {
     });
 
 
-    it('should POST another article doc', function(done) {
+    it('should POST another doc', function(done) {
+      var doc = clone(articleData);
+      doc.other = { id_: docId };
+
       server.inject(
-        { method: 'POST', url: route, payload: JSON.stringify(articleData) },
+        { method: 'POST', url: route, payload: JSON.stringify(doc) },
         function(res) {
           assert(res.statusCode == 200);
+          doc2Id = res.result._id;
           done();
         }
       );
@@ -270,6 +280,18 @@ describe('cores-hapi', function() {
     });
 
 
+    it('should GET with included refs', function(done) {
+      server.inject(
+        { method: 'GET', url: route + '/' + doc2Id + '?include_refs=true' },
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(res.result.other._id === docId);
+          done();
+        }
+      );
+    });
+
+
     it('should not GET nonexistant', function(done) {
       server.inject(
         { method: 'GET', url: route + '/asdasd'},
@@ -304,6 +326,20 @@ describe('cores-hapi', function() {
       );
     });
 
+
+    it('should GET the view with included refs', function(done) {
+      var query = '?limit=1&keys=' + encodeURIComponent('["' + doc2Id + '"]') + '&include_docs=true&include_refs=true';
+      server.inject(
+        { method: 'GET', url: viewRoute + query},
+        function(res) {
+          assert(res.statusCode === 200);
+          assert(res.result.rows[0].doc.other._id === docId);
+          done();
+        }
+      );
+    });
+
+
     it('should PUT with id', function(done) {
       server.inject(
         { method: 'PUT', url: route + '/' + uuid, payload: JSON.stringify(articleData) },
@@ -317,6 +353,7 @@ describe('cores-hapi', function() {
         }
       );
     });
+
 
     it('should PUT with id and rev', function(done) {
       server.inject(
@@ -368,6 +405,7 @@ describe('cores-hapi', function() {
       form.append('file', file);
     });
 
+
     it('should DELETE', function(done) {
       server.inject(
         { method: 'DELETE', url: route + '/' + docId + '/' + docRev },
@@ -385,6 +423,7 @@ describe('cores-hapi', function() {
         }
       );
     });
+
 
     it('should not DELETE nonexistant', function(done) {
       server.inject(
@@ -434,7 +473,7 @@ describe('cores-hapi', function() {
           done();
         }, function(err) {
           if (err.error === 'not_found') {
-            var d = JSON.parse(JSON.stringify(articleData));
+            var d = clone(articleData);
             d._id = articleId;
             resources.Article.save(d).then(function(doc) {
               done();
@@ -489,7 +528,7 @@ describe('cores-hapi', function() {
           });
 
           it('should ' + (shouldCreate ? '' : 'not ') + 'save', function(done) {
-            var doc = JSON.parse(JSON.stringify(articleData));
+            var doc = clone(articleData);
             server.inject(
               { method: 'POST', url: '/articles',
                 payload: JSON.stringify(doc),
@@ -503,7 +542,7 @@ describe('cores-hapi', function() {
           });
 
           it('should ' + (shouldCreate ? '' : 'not ') + 'save with id', function(done) {
-            var doc = JSON.parse(JSON.stringify(articleData));
+            var doc = clone(articleData);
             server.inject(
               { method: 'PUT', url: '/articles/' + 'saved_' + (new Date().getTime()),
                 payload: JSON.stringify(doc),
@@ -605,7 +644,7 @@ describe('cores-hapi', function() {
 
 
     it('should call the create handler on POST', function(done) {
-      var doc = JSON.parse(JSON.stringify(articleData));
+      var doc = clone(articleData);
       server.inject(
         { method: 'POST', url: '/articles', payload: JSON.stringify(doc) },
         function(res) {
@@ -622,7 +661,7 @@ describe('cores-hapi', function() {
 
 
     it('should call the create handler on PUT/id', function(done) {
-      var doc = JSON.parse(JSON.stringify(articleData));
+      var doc = clone(articleData);
       server.inject(
         { method: 'PUT', url: '/articles/handler_test', payload: JSON.stringify(doc) },
         function(res) {

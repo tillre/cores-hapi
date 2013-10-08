@@ -1,8 +1,8 @@
-module.exports = {
+var j = require('jski');
 
-  properties: {
-    title: { type: 'string' },
-    file: { type: 'string' }
-  }
-  
-};
+module.exports = j.object({
+
+  title: j.string(),
+  file: j.string()
+
+});

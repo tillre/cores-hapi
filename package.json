@@ -34,6 +34,7 @@
   "devDependencies": {
     "nano": "3.x.x",
     "mocha": "1.x.x",
-    "request": "~2.20.0"
+    "request": "~2.20.0",
+    "jski": "~0.3.1"
   }
 }

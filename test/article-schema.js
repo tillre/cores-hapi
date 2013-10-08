@@ -1,21 +1,14 @@
-module.exports = {
+var j = require('jski');
 
-  title: 'Article',
-  description: 'Some Article',
+module.exports = j.object({
 
-  properties: {
-    title: { type: 'string', minLength: 1 },
-    author: {
-      properties: {
-        firstname: { type: 'string'},
-        lastname: { type: 'string' }
-      }
-    },
-    tags: {
-      type: 'array',
-      items: { type: 'string' }
-    },
-    body: { type: 'string', minLength: 1 }
-  },
-  required: ['title', 'author', 'body']
-};
+  title: j.string().minLength(1),
+  author: j.object({
+    firstname: j.string(),
+    lastname: j.string()
+  }),
+  tags: j.array(j.string()),
+  body: j.string().minLength(1)
+
+}).title('Article')
+  .required('title', 'author', 'body');

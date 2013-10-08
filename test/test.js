@@ -376,6 +376,7 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'PUT', url: route + '/' + docId + '/' + docRev, payload: JSON.stringify({title:42}) },
         function(res) {
+          console.log('hellllooooo?');
           assert(res.statusCode === 400);
           assert(util.isArray(res.result.errors));
           done();

@@ -434,170 +434,176 @@ describe('cores-hapi', function() {
         }
       );
     });
+  });
 
 
-    describe('permissions', function() {
+  describe('permissions', function() {
 
-      var authData = [
-        { user: 'all', pass: 'all',
-          permissions: { load: true, create: true, update: true, destroy: true, views: true }},
-        { user: 'load', pass: 'load',
-          permissions: { load: true, create: false, update: false, destroy: false, views: false }},
-        { user: 'create', pass: 'create',
-          permissions: { load: false, create: true, update: false, destroy: false, views: false }},
-        { user: 'update', pass: 'update',
-          permissions: { load: false, create: false, update: true, destroy: false, views: false }},
-        { user: 'destroy', pass: 'destroy',
-          permissions: { load: false, create: false, update: false, destroy: true, views: false }},
-        { user: 'views', pass: 'views',
-          permissions: { load: false, create: false, update: false, destroy: true, viewss: true }},
-        { user: 'none', pass: 'none' }
-      ];
+    before(function(done) {
+      startServer({ auth: true }, done);
+    });
 
-      var createCredentials = function(permissions) {
-        if (!permissions) {
-          return { permissions: {} };
+    after(stopServer);
+
+    var authData = [
+      { user: 'all', pass: 'all',
+        permissions: { load: true, create: true, update: true, destroy: true, views: true }},
+      { user: 'load', pass: 'load',
+        permissions: { load: true, create: false, update: false, destroy: false, views: false }},
+      { user: 'create', pass: 'create',
+        permissions: { load: false, create: true, update: false, destroy: false, views: false }},
+      { user: 'update', pass: 'update',
+        permissions: { load: false, create: false, update: true, destroy: false, views: false }},
+      { user: 'destroy', pass: 'destroy',
+        permissions: { load: false, create: false, update: false, destroy: true, views: false }},
+      { user: 'views', pass: 'views',
+        permissions: { load: false, create: false, update: false, destroy: true, viewss: true }},
+      { user: 'none', pass: 'none' }
+    ];
+
+    var createCredentials = function(permissions) {
+      if (!permissions) {
+        return { permissions: {} };
+      }
+      var ps = { permissions: { Article: {} } };
+      for (var n in permissions) {
+        ps.permissions.Article[n] = permissions[n];
+      }
+      return ps;
+    };
+
+    var articleId = 'auth_article';
+
+    beforeEach(function(done) {
+      // make sure dummy article exists
+      resources.Article.load(articleId).then(function() {
+        done();
+      }, function(err) {
+        if (err.error === 'not_found') {
+          var d = clone(articleData);
+          d._id = articleId;
+          resources.Article.save(d).then(function(doc) {
+            done();
+          }, done);
         }
-        var ps = { permissions: { Article: {} } };
-        for (var n in permissions) {
-          ps.permissions.Article[n] = permissions[n];
-        }
-        return ps;
-      };
-
-      var articleId = 'auth_article';
-
-      beforeEach(function(done) {
-        // make sure dummy article exists
-        resources.Article.load(articleId).then(function() {
-          done();
-        }, function(err) {
-          if (err.error === 'not_found') {
-            var d = clone(articleData);
-            d._id = articleId;
-            resources.Article.save(d).then(function(doc) {
-              done();
-            }, done);
-          }
-        });
       });
+    });
 
 
-      authData.forEach(function(data) {
+    authData.forEach(function(data) {
 
-        var cred = createCredentials(data.permissions);
-        var shouldLoad = data.permissions && data.permissions.load;
-        var shouldView = data.permissions && data.permissions.views;
-        var shouldCreate = data.permissions && data.permissions.create;
-        var shouldUpdate = data.permissions && data.permissions.update;
-        var shouldDestroy = data.permissions && data.permissions.destroy;
+      var cred = createCredentials(data.permissions);
+      var shouldLoad = data.permissions && data.permissions.load;
+      var shouldView = data.permissions && data.permissions.views;
+      var shouldCreate = data.permissions && data.permissions.create;
+      var shouldUpdate = data.permissions && data.permissions.update;
+      var shouldDestroy = data.permissions && data.permissions.destroy;
 
-        describe(data.user, function() {
+      describe(data.user, function() {
 
-          it('should ' + (shouldLoad ? '' : 'not ') + 'load single', function(done) {
+        it('should ' + (shouldLoad ? '' : 'not ') + 'load single', function(done) {
+          server.inject(
+            { method: 'GET', url: '/articles/' + articleId, credentials: cred },
+            function(res) {
+              if (shouldLoad) assert(res.statusCode === 200);
+              else            assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+
+        it('should ' + (shouldView ? '' : 'not ') + 'view all', function(done) {
+          server.inject(
+            { method: 'GET', url: '/articles', credentials: cred },
+            function(res) {
+              if (shouldView) assert(res.statusCode === 200);
+              else            assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+
+        it('should ' + (shouldView ? '' : 'not ') + 'call view', function(done) {
+          server.inject(
+            { method: 'GET', url: '/articles/_views/titles', credentials: cred },
+            function(res) {
+              if (shouldView) assert(res.statusCode === 200);
+              else            assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+
+        it('should ' + (shouldCreate ? '' : 'not ') + 'save', function(done) {
+          var doc = clone(articleData);
+          server.inject(
+            { method: 'POST', url: '/articles',
+              payload: JSON.stringify(doc),
+              credentials: cred },
+            function(res) {
+              if (shouldCreate) assert(res.statusCode === 200);
+              else              assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+
+        it('should ' + (shouldCreate ? '' : 'not ') + 'save with id', function(done) {
+          var doc = clone(articleData);
+          server.inject(
+            { method: 'PUT', url: '/articles/' + 'saved_' + (new Date().getTime()),
+              payload: JSON.stringify(doc),
+              credentials: cred },
+            function(res) {
+              if (shouldCreate) assert(res.statusCode === 200);
+              else              assert(res.statusCode !== 200);
+              done();
+            }
+          );
+        });
+
+        it('should ' + (shouldUpdate ? '' : 'not ') + 'update', function(done) {
+          resources['Article'].load(articleId, function(err, doc) {
+            assert(!err);
+
+            doc.title = 'Hello Auth';
             server.inject(
-              { method: 'GET', url: '/articles/' + articleId, credentials: cred },
-              function(res) {
-                if (shouldLoad) assert(res.statusCode === 200);
-                else            assert(res.statusCode !== 200);
-                done();
-              }
-            );
-          });
-
-          it('should ' + (shouldView ? '' : 'not ') + 'view all', function(done) {
-            server.inject(
-              { method: 'GET', url: '/articles', credentials: cred },
-              function(res) {
-                if (shouldView) assert(res.statusCode === 200);
-                else            assert(res.statusCode !== 200);
-                done();
-              }
-            );
-          });
-
-          it('should ' + (shouldView ? '' : 'not ') + 'call view', function(done) {
-            server.inject(
-              { method: 'GET', url: '/articles/_views/titles', credentials: cred },
-              function(res) {
-                if (shouldView) assert(res.statusCode === 200);
-                else            assert(res.statusCode !== 200);
-                done();
-              }
-            );
-          });
-
-          it('should ' + (shouldCreate ? '' : 'not ') + 'save', function(done) {
-            var doc = clone(articleData);
-            server.inject(
-              { method: 'POST', url: '/articles',
+              { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
                 payload: JSON.stringify(doc),
                 credentials: cred },
               function(res) {
-                if (shouldCreate) assert(res.statusCode === 200);
+                if (shouldUpdate) assert(res.statusCode === 200);
                 else              assert(res.statusCode !== 200);
                 done();
               }
             );
           });
-
-          it('should ' + (shouldCreate ? '' : 'not ') + 'save with id', function(done) {
-            var doc = clone(articleData);
+          resources.Article.load(articleId).then(function(doc) {
+            doc.title = 'Hello Auth';
             server.inject(
-              { method: 'PUT', url: '/articles/' + 'saved_' + (new Date().getTime()),
+              { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
                 payload: JSON.stringify(doc),
                 credentials: cred },
               function(res) {
-                if (shouldCreate) assert(res.statusCode === 200);
+                if (shouldUpdate) assert(res.statusCode === 200);
                 else              assert(res.statusCode !== 200);
                 done();
               }
             );
-          });
+          }, done);
+        });
 
-          it('should ' + (shouldUpdate ? '' : 'not ') + 'update', function(done) {
-            resources['Article'].load(articleId, function(err, doc) {
-              assert(!err);
-
-              doc.title = 'Hello Auth';
-              server.inject(
-                { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
-                  payload: JSON.stringify(doc),
-                  credentials: cred },
-                function(res) {
-                  if (shouldUpdate) assert(res.statusCode === 200);
-                  else              assert(res.statusCode !== 200);
-                  done();
-                }
-              );
-            });
-            resources.Article.load(articleId).then(function(doc) {
-              doc.title = 'Hello Auth';
-              server.inject(
-                { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
-                  payload: JSON.stringify(doc),
-                  credentials: cred },
-                function(res) {
-                  if (shouldUpdate) assert(res.statusCode === 200);
-                  else              assert(res.statusCode !== 200);
-                  done();
-                }
-              );
-            }, done);
-          });
-
-          it('should ' + (shouldDestroy ? '' : 'not ') + 'destroy', function(done) {
-            resources.Article.load(articleId).then(function(doc) {
-              server.inject(
-                { method: 'DELETE', url: '/articles/' + doc._id + '/' + doc._rev, credentials: cred },
-                function(res) {
-                  if (shouldDestroy) assert(res.statusCode === 200);
-                  else               assert(res.statusCode !== 200);
-                  done();
-                }
-              );
-            }, done);
-          });
+        it('should ' + (shouldDestroy ? '' : 'not ') + 'destroy', function(done) {
+          resources.Article.load(articleId).then(function(doc) {
+            server.inject(
+              { method: 'DELETE', url: '/articles/' + doc._id + '/' + doc._rev, credentials: cred },
+              function(res) {
+                if (shouldDestroy) assert(res.statusCode === 200);
+                else               assert(res.statusCode !== 200);
+                done();
+              }
+            );
+          }, done);
         });
       });
     });
@@ -739,6 +745,8 @@ describe('cores-hapi', function() {
     after(stopServer);
 
     var routes = [
+      { name: 'GET/index', method: 'get', url: 'http://localhost:3333/_index' },
+
       { name: 'GET', method: 'get', url: 'http://localhost:3333/articles' },
       { name: 'GET/id', method: 'get', url: 'http://localhost:3333/articles/auth_article' },
       { name: 'GET/_schema', method: 'get', url: 'http://localhost:3333/articles/_schema' },

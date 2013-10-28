@@ -9,6 +9,7 @@ var nano = require('nano')('http://localhost:5984');
 var request = require('request');
 var Q = require('kew');
 var coresHapi = require('../index.js');
+var ApiMiddleware = require('../lib/api-middleware.js');
 
 // resources
 var articleDesign = require('./article-design.js');
@@ -28,16 +29,11 @@ function clone(obj) {
 describe('cores-hapi', function() {
 
   var dbName = 'test-cores-hapi';
-  var db = nano.use(dbName);
-  var cores = require('cores')(db);
-
+  var cores = require('cores')('http://localhost:5984/' + dbName);
   var server;
-  var resources;
 
-
-  var startServer = function(options, done) {
-
-    server = new hapi.Server('0.0.0.0', 3333);
+  var startServer = function(options, callback) {
+    server = new hapi.Server('127.0.0.1', 3333);
 
     if (options.auth) {
       server.auth('basic', {
@@ -47,23 +43,22 @@ describe('cores-hapi', function() {
         }
       });
     }
-
     options.cores = cores;
-    resources = options.resources = {};
 
     cores.create('Article', { schema: articleSchema, design: articleDesign }).then(function(res) {
-      options.resources.Article = res;
       return cores.create('Image', { schema: imageSchema, design: imageDesign });
 
     }).then(function(res) {
-      options.resources.Image = res;
+      cores.resources.Image = res;
 
       server.pack.require('../', options, function(err) {
         assert(!err);
-        server.start(done);
+        server.start(function(err) {
+          callback(err, server);
+        });
       });
 
-    }).fail(done);
+    }).fail(callback);
   };
 
 
@@ -107,7 +102,7 @@ describe('cores-hapi', function() {
     var docRev = null;
     var uuid = null;
 
-    var handler = function(request, resources, payload) {
+    var imageHandler = function(payload) {
       if (payload.isMultipart) {
         return Q.resolve(payload.doc);
       }
@@ -115,11 +110,13 @@ describe('cores-hapi', function() {
         return Q.resolve(payload);
       }
     };
-    var handlers = { create: handler, update: handler };
-
 
     before(function(done) {
-      startServer({ handlers: handlers }, done);
+      startServer({}, function(err, server) {
+        server.plugins['cores-hapi'].setHandler('create', 'Image', imageHandler);
+        server.plugins['cores-hapi'].setHandler('update', 'Image', imageHandler);
+        done();
+      });
     });
 
     after(stopServer);
@@ -476,13 +473,13 @@ describe('cores-hapi', function() {
 
     beforeEach(function(done) {
       // make sure dummy article exists
-      resources.Article.load(articleId).then(function() {
+      cores.resources.Article.load(articleId).then(function() {
         done();
       }, function(err) {
         if (err.error === 'not_found') {
           var d = clone(articleData);
           d._id = articleId;
-          resources.Article.save(d).then(function(doc) {
+          cores.resources.Article.save(d).then(function(doc) {
             done();
           }, done);
         }
@@ -563,7 +560,7 @@ describe('cores-hapi', function() {
         });
 
         it('should ' + (shouldUpdate ? '' : 'not ') + 'update', function(done) {
-          resources['Article'].load(articleId, function(err, doc) {
+          cores.resources.Article.load(articleId, function(err, doc) {
             assert(!err);
 
             doc.title = 'Hello Auth';
@@ -578,7 +575,7 @@ describe('cores-hapi', function() {
               }
             );
           });
-          resources.Article.load(articleId).then(function(doc) {
+          cores.resources.Article.load(articleId).then(function(doc) {
             doc.title = 'Hello Auth';
             server.inject(
               { method: 'PUT', url: '/articles/' + doc._id + '/' + doc._rev,
@@ -594,7 +591,7 @@ describe('cores-hapi', function() {
         });
 
         it('should ' + (shouldDestroy ? '' : 'not ') + 'destroy', function(done) {
-          resources.Article.load(articleId).then(function(doc) {
+          cores.resources.Article.load(articleId).then(function(doc) {
             server.inject(
               { method: 'DELETE', url: '/articles/' + doc._id + '/' + doc._rev, credentials: cred },
               function(res) {
@@ -610,40 +607,154 @@ describe('cores-hapi', function() {
   });
 
 
+  describe('ApiMiddleware', function() {
+
+    it('should pass on payload', function(done) {
+      var md = new ApiMiddleware();
+      md.handleAction('load', {}, { name: 'Foo' }, { data: 123 }).then(function(payload) {
+        assert(payload.data === 123);
+        done();
+      }, done);
+    });
+
+
+    it('should call handler', function(done) {
+      var md = new ApiMiddleware();
+
+      md.setHandler('load', 'Foo', function(payload) {
+        return { called: true };
+      });
+
+      md.handleAction('load', {}, { name: 'Foo' }, {}).then(function(payload) {
+        assert(payload.called);
+        done();
+      }, done);
+    });
+
+    it('should call pre handler', function(done) {
+      var md = new ApiMiddleware();
+
+      md.setPreHandler('load', function(payload) {
+        return { called: true };
+      });
+      md.handleAction('load', {}, { name: 'Foo' }, {}).then(function(payload) {
+        assert(payload.called);
+        done();
+      }, done);
+    });
+
+    it('should call post handler', function(done) {
+      var md = new ApiMiddleware();
+
+      md.setPostHandler('load', function(payload) {
+        return { called: true };
+      });
+      md.handleAction('load', {}, { name: 'Foo' }, {}).then(function(payload) {
+        assert(payload.called);
+        done();
+      }, done);
+    });
+
+    it('should call handlers in order', function(done) {
+      var md = new ApiMiddleware();
+
+      md.setPreHandler('load', function(payload) {
+        assert(payload.count === 0);
+        return { count: payload.count + 1 };
+      });
+      md.setHandler('load', 'Foo', function(payload) {
+        assert(payload.count === 1);
+        return { count: payload.count + 1 };
+      });
+      md.setPostHandler('load', function(payload) {
+        assert(payload.count === 2);
+        return { count: payload.count + 1 };
+      });
+
+      md.handleAction('load', {}, { name: 'Foo' }, { count: 0 }).then(function(payload) {
+        assert(payload.count === 3);
+        done();
+      }, done);
+    });
+
+
+    it('should propagate error', function(done) {
+      var md = new ApiMiddleware();
+
+      md.setHandler('load', 'Foo', function(payload) {
+        throw new Error('foo');
+      });
+
+      md.handleAction('load', {}, { name: 'Foo' }, {}).then(function(payload) {
+        assert(false);
+      }, function(err) {
+        assert(util.isError(err));
+        done();
+      });
+    });
+
+
+    it('should include request in context of promise', function(done) {
+      var md = new ApiMiddleware();
+
+      md.setHandler('load', 'Foo', function(payload) {
+        var c = this.getContext();
+        assert(c);
+        assert(c.request);
+        assert(c.request.iAmARequest);
+        assert(c.action === 'load');
+        assert(c.resource);
+        assert(c.resource.name === 'Foo');
+        return payload;
+      });
+
+      md.handleAction('load', {iAmARequest: true}, { name: 'Foo' }, { data: 123 }).then(function(payload) {
+        assert(this.getContext());
+        assert(this.getContext().request);
+        assert(this.getContext().request.iAmARequest);
+        done();
+      }, done);
+    });
+  });
+
+
   describe('handlers', function() {
 
     var articleDoc;
     var handlerCalls = {};
-    var handlers = {
-      load: function(request, resource, doc) {
-        handlerCalls.load = true;
-        return Q.resolve(doc);
-      },
-
-      create: function(request, resource, doc) {
-        handlerCalls.create = true;
-        return Q.resolve(doc);
-      },
-
-      update: function(request, resource, doc) {
-        handlerCalls.update = true;
-        return Q.resolve(doc);
-      },
-
-      destroy: function(request, resource, docId) {
-        handlerCalls.destroy = true;
-        return Q.resolve(docId);
-      },
-
-      views: function(request, resource, result) {
-        handlerCalls.views = true;
-        return Q.resolve(result);
-      }
-    };
-
+    var preHandlerCalls = {};
+    var postHandlerCalls = {};
 
     before(function(done) {
-      startServer({ handlers: handlers }, done);
+      startServer({}, function(err, server) {
+        var api = server.plugins['cores-hapi'];
+
+        function createHandler(calls, name) {
+          return function(payload) {
+            calls[name] = true;
+            return Q.resolve(payload);
+          };
+        };
+        api.setHandler('load', 'Article', createHandler(handlerCalls, 'load'));
+        api.setHandler('create', 'Article', createHandler(handlerCalls, 'create'));
+        api.setHandler('update', 'Article', createHandler(handlerCalls, 'update'));
+        api.setHandler('destroy', 'Article', createHandler(handlerCalls, 'destroy'));
+        api.setHandler('views', 'Article', createHandler(handlerCalls, 'views'));
+
+        api.setPreHandler('load', createHandler(preHandlerCalls, 'load'));
+        api.setPreHandler('create', createHandler(preHandlerCalls, 'create'));
+        api.setPreHandler('update', createHandler(preHandlerCalls, 'update'));
+        api.setPreHandler('destroy', createHandler(preHandlerCalls, 'destroy'));
+        api.setPreHandler('views', createHandler(preHandlerCalls, 'views'));
+
+        api.setPostHandler('load', createHandler(postHandlerCalls, 'load'));
+        api.setPostHandler('create', createHandler(postHandlerCalls, 'create'));
+        api.setPostHandler('update', createHandler(postHandlerCalls, 'update'));
+        api.setPostHandler('destroy', createHandler(postHandlerCalls, 'destroy'));
+        api.setPostHandler('views', createHandler(postHandlerCalls, 'views'));
+
+        done();
+      });
     });
 
     after(stopServer);
@@ -656,7 +767,12 @@ describe('cores-hapi', function() {
         function(res) {
           assert(res.statusCode === 200);
           assert(handlerCalls.create);
+          assert(preHandlerCalls.create);
+          assert(postHandlerCalls.create);
+
           handlerCalls.create = false;
+          preHandlerCalls.create = false;
+          postHandlerCalls.create = false;
 
           articleDoc = res.result;
 
@@ -673,7 +789,9 @@ describe('cores-hapi', function() {
         function(res) {
           assert(res.statusCode === 200);
           assert(handlerCalls.create);
-          handlerCalls.create = false;
+          assert(preHandlerCalls.create);
+          assert(postHandlerCalls.create);
+
           done();
         }
       );
@@ -686,7 +804,8 @@ describe('cores-hapi', function() {
         function(res) {
           assert(res.statusCode === 200);
           assert(handlerCalls.update);
-          handlerCalls.update = false;
+          assert(preHandlerCalls.update);
+          assert(postHandlerCalls.update);
 
           articleDoc = res.result;
 
@@ -702,7 +821,8 @@ describe('cores-hapi', function() {
         function(res) {
           assert(res.statusCode === 200);
           assert(handlerCalls.load);
-          handlerCalls.load = false;
+          assert(preHandlerCalls.load);
+          assert(postHandlerCalls.load);
           done();
         }
       );
@@ -715,7 +835,8 @@ describe('cores-hapi', function() {
         function(res) {
           assert(res.statusCode === 200);
           assert(handlerCalls.views);
-          handlerCalls.views = false;
+          assert(preHandlerCalls.views);
+          assert(postHandlerCalls.views);
           done();
         }
       );
@@ -728,7 +849,8 @@ describe('cores-hapi', function() {
         function(res) {
           assert(res.statusCode === 200);
           assert(handlerCalls.destroy);
-          handlerCalls.destroy = false;
+          assert(preHandlerCalls.destroy);
+          assert(postHandlerCalls.destroy);
           done();
         }
       );

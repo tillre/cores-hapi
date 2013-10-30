@@ -35,6 +35,6 @@
     "mocha": "1.x.x",
     "request": "~2.20.x",
     "cores": "~0.5.x",
-    "jski": "~0.4.x"
+    "jski": "~0.5.x"
   }
 }

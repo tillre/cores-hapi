@@ -1,8 +1,8 @@
-var j = require('jski');
+var J = require('jski')();
 
-module.exports = j.object({
+module.exports = J.object({
 
-  title: j.string(),
-  file: j.string()
+  title: J.string(),
+  file: J.string()
 
 });

@@ -33,7 +33,11 @@ describe('cores-hapi', function() {
   var server;
 
   var startServer = function(options, callback) {
-    server = new hapi.Server('127.0.0.1', 3333);
+    server = new hapi.Server('127.0.0.1', 3333, {
+      payload: {
+        multipart: 'file'
+      }
+    });
 
     if (options.auth) {
       server.auth('basic', {
@@ -45,7 +49,7 @@ describe('cores-hapi', function() {
     }
     options.cores = cores;
 
-    cores.create('Article', { schema: articleSchema, design: articleDesign }).then(function(res) {
+    cores.create('Article', { schema: articleSchema, design: articleDesign }, true).then(function(res) {
       return cores.create('Image', { schema: imageSchema, design: imageDesign });
 
     }).then(function(res) {

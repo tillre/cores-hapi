@@ -8,9 +8,11 @@ var createApi = require('./lib/create-api.js');
 //
 module.exports.register = function(plugin, options, next) {
 
-  if (typeof plugin.route !== 'function') {
-    return next(new Error('Plugin requires route permission'));
-  };
+  plugin.log(['cores-hapi'], 'register');
+  var selection = plugin;
+  if (options.selection) {
+    selection = plugin.select(options.selection);
+  }
 
   function expose(scope, fnName) {
     plugin.expose(fnName, function() {
@@ -19,6 +21,7 @@ module.exports.register = function(plugin, options, next) {
   }
 
   var cores = Cores(options.db);
+
   if (!options.resourcesDir) {
     return next(new Error('No resources directory specified'));
   }
@@ -32,10 +35,20 @@ module.exports.register = function(plugin, options, next) {
       expose(api, 'setPreHandler');
       expose(api, 'setPostHandler');
 
-      createApi(plugin, cores, api.baseHandlers, options.api, next);
+      try {
+        createApi(selection, cores, api.baseHandlers, options.api, next);
+      }
+      catch(e) {
+        next(e);
+      }
     }
     else {
-      next();
+      try {
+        next();
+      }
+      catch(e) {
+        next(e);
+      }
     }
   }, function(err) {
     next(err);

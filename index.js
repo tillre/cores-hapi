@@ -1,3 +1,4 @@
+var Cores = require('cores');
 var ApiMiddleware = require('./lib/api-middleware');
 var createApi = require('./lib/create-api.js');
 
@@ -17,10 +18,26 @@ module.exports.register = function(plugin, options, next) {
     });
   }
 
-  var api = new ApiMiddleware();
-  expose(api, 'setHandler');
-  expose(api, 'setPreHandler');
-  expose(api, 'setPostHandler');
+  var cores = Cores(options.db);
+  if (!options.resourcesDir) {
+    return next(new Error('No resources directory specified'));
+  }
+  cores.load(options.resourcesDir, options.syncDesign).then(function(resources) {
 
-  createApi(plugin, api.baseHandlers, options, next);
+    plugin.expose('cores', cores);
+
+    if (options.api) {
+      var api = new ApiMiddleware();
+      expose(api, 'setHandler');
+      expose(api, 'setPreHandler');
+      expose(api, 'setPostHandler');
+
+      createApi(plugin, cores, api.baseHandlers, options.api, next);
+    }
+    else {
+      next();
+    }
+  }, function(err) {
+    next(err);
+  });
 };

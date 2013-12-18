@@ -11,13 +11,7 @@ var Q = require('kew');
 var coresHapi = require('../index.js');
 var ApiMiddleware = require('../lib/api-middleware.js');
 
-// resources
-var articleDesign = require('./article-design.js');
-var articleSchema = require('./article-schema.js');
 var articleData = require('./article-data.js');
-
-var imageDesign = require('./image-design.js');
-var imageSchema = require('./image-schema.js');
 var imageData = require('./image-data.js');
 
 
@@ -29,17 +23,16 @@ function clone(obj) {
 describe('cores-hapi', function() {
 
   var dbName = 'test-cores-hapi';
-  var cores = require('cores')('http://localhost:5984/' + dbName);
-  var server;
+  var cores, server;
 
-  var startServer = function(options, callback) {
+  var startServer = function(apiOptions, callback) {
     server = new hapi.Server('127.0.0.1', 3333, {
       payload: {
         multipart: 'file'
       }
     });
 
-    if (options.auth) {
+    if (apiOptions.auth) {
       server.auth('basic', {
         scheme: 'basic',
         validateFunc: function(username, password, callback) {
@@ -47,22 +40,23 @@ describe('cores-hapi', function() {
         }
       });
     }
-    options.cores = cores;
 
-    cores.create('Article', { schema: articleSchema, design: articleDesign }, true).then(function(res) {
-      return cores.create('Image', { schema: imageSchema, design: imageDesign });
+    var options = {
+      db: 'http://localhost:5984/' + dbName,
+      resourcesDir: __dirname,
+      syncDesign: true,
+      api: apiOptions
+    };
 
-    }).then(function(res) {
-      cores.resources.Image = res;
+    server.pack.require('../', options, function(err) {
+      assert(!err);
 
-      server.pack.require('../', options, function(err) {
-        assert(!err);
-        server.start(function(err) {
-          callback(err, server);
-        });
+      cores = server.pack.plugins['cores-hapi'].cores;
+
+      server.start(function(err) {
+        callback(err, server);
       });
-
-    }).fail(callback);
+    });
   };
 
 

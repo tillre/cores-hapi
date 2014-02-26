@@ -1,23 +1,16 @@
 var Cores = require('cores');
-var ApiMiddleware = require('./lib/api-middleware');
-var createApi = require('./lib/create-api.js');
+var Middleware = require('./lib/middleware');
+var createRoutes = require('./lib/create-routes.js');
 
 
 //
-// export hapi plugin register
+// hapi plugin
 //
 module.exports.register = function(plugin, options, next) {
 
-  plugin.log(['cores-hapi'], 'register');
   var selection = plugin;
   if (options.selection) {
     selection = plugin.select(options.selection);
-  }
-
-  function expose(scope, fnName) {
-    plugin.expose(fnName, function() {
-      scope[fnName].apply(scope, arguments);
-    });
   }
 
   var cores = Cores(options.db);
@@ -30,13 +23,16 @@ module.exports.register = function(plugin, options, next) {
     plugin.expose('cores', cores);
 
     if (options.api) {
-      var api = new ApiMiddleware();
-      expose(api, 'setHandler');
-      expose(api, 'setPreHandler');
-      expose(api, 'setPostHandler');
+      var pre = new Middleware();
+      var post = new Middleware();
+      plugin.expose('pre', pre);
+      plugin.expose('post', post);
 
       try {
-        createApi(selection, cores, api.baseHandlers, options.api, next);
+        createRoutes(selection, cores, pre, post, options.api, function() {
+          plugin.log(['cores-hapi'], 'initialized with api');
+          next();
+        });
       }
       catch(e) {
         next(e);
@@ -44,6 +40,7 @@ module.exports.register = function(plugin, options, next) {
     }
     else {
       try {
+        plugin.log(['cores-hapi'], 'initialized without api');
         next();
       }
       catch(e) {

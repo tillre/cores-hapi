@@ -10,6 +10,7 @@ var request = require('request');
 var Q = require('kew');
 var coresHapi = require('../index.js');
 var Middleware = require('../lib/middleware.js');
+var Common = require('../lib/common.js');
 
 var articleData = require('./article-data.js');
 var imageData = require('./image-data.js');
@@ -104,10 +105,10 @@ describe('cores-hapi', function() {
     });
 
 
-    it('should call the handler', function(done) {
+    it('should call the specialized handler', function(done) {
       var m = new Middleware();
 
-      m.when('load', 'Foo', function(payload, request, resource , action) {
+      m.load('Foo', function(payload, request, resource , action) {
         assert(payload.isPayload);
         assert(request.isRequest);
         assert(resource.name === 'Foo');
@@ -123,10 +124,54 @@ describe('cores-hapi', function() {
     });
 
 
+    it('should call the generic handler', function(done) {
+      var m = new Middleware();
+
+      m.load(function(payload, request, resource , action) {
+        assert(payload.isPayload);
+        assert(request.isRequest);
+        assert(resource.name === 'Foo');
+        assert(action === 'load');
+        payload.wasCalled = true;
+        return payload;
+      });
+
+      m.handle('load', { name: 'Foo'}, { isRequest: true }, { isPayload: true }).then(function(result) {
+        assert(result.wasCalled);
+        done();
+      }, done);
+    });
+
+
+    it('should call the specialized and generic handler', function(done) {
+      var m = new Middleware();
+      var sc = false;
+      var gc = false;
+
+      m.load('Foo', function(payload, request, resource , action) {
+        assert(!payload.gc);
+        payload.sc = true;
+        return payload;
+      });
+
+      m.load(function(payload, request, resource , action) {
+        assert(payload.sc);
+        payload.gc = true;
+        return payload;
+      });
+
+      m.handle('load', { name: 'Foo'}, { isRequest: true }, { isPayload: true }).then(function(result) {
+        assert(result.sc);
+        assert(result.gc);
+        done();
+      }, done);
+    });
+
+
     it('should propagate error', function(done) {
       var m = new Middleware();
 
-      m.when('load', 'Foo', function() {
+      m.load('Foo', function() {
         throw new Error('error');
       });
 
@@ -160,8 +205,8 @@ describe('cores-hapi', function() {
     before(function(done) {
       startServer({}, function(err, server) {
         if (err) return done(err);
-        server.plugins['cores-hapi'].pre.when('create', 'Image', imageHandler);
-        server.plugins['cores-hapi'].pre.when('update', 'Image', imageHandler);
+        server.plugins['cores-hapi'].pre.create('Image', imageHandler);
+        server.plugins['cores-hapi'].pre.update('Image', imageHandler);
         done();
       });
     });
@@ -487,6 +532,8 @@ describe('cores-hapi', function() {
     var articleDoc;
     var preHandlerCalls = {};
     var postHandlerCalls = {};
+    var preAnyHandlerCalls = {};
+    var postAnyHandlerCalls = {};
 
     before(function(done) {
       startServer({}, function(err, server) {
@@ -496,13 +543,22 @@ describe('cores-hapi', function() {
         function createHandler(calls, name) {
           return function(payload) {
             calls[name] = true;
-            return Q.resolve(payload);
+            return payload;
           };
         };
 
-        ['load', 'create', 'update', 'destroy', 'view'].forEach(function(action) {
-          pre.when(action, 'Article', createHandler(preHandlerCalls, action));
-          post.when(action, 'Article', createHandler(postHandlerCalls, action));
+        Object.keys(Common.ACTIONS).forEach(function(action) {
+          pre[action]('Article', createHandler(preHandlerCalls, action));
+          post[action]('Article', createHandler(postHandlerCalls, action));
+
+          pre[action](function(payload) {
+            preAnyHandlerCalls[action] = true;
+            return payload;
+          });
+          post[action](function(payload) {
+            postAnyHandlerCalls[action] = true;
+            return payload;
+          });
         });
 
         done();
@@ -595,6 +651,15 @@ describe('cores-hapi', function() {
           done();
         }
       );
+    });
+
+
+    it('should have called the all pre/post handler', function() {
+      Object.keys(Common.ACTIONS).forEach(function(action) {
+        if (action === 'schema') return;
+        assert(preAnyHandlerCalls[action]);
+        assert(postAnyHandlerCalls[action]);
+      });
     });
   });
 

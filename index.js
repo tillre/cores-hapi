@@ -23,10 +23,10 @@ module.exports.register = function(plugin, options, next) {
 
   Common.debug = options.debug;
 
-  var cores;
+  var cores = Cores(options.dbUrl);
 
-  Cores(options.dbUrl).then(function(c) {
-    cores = c;
+  // make sure db is there
+  cores.info().then(function(info) {
     return cores.load(options.resourceDir, options.context, options.syncDesign);
 
   }).then(function(resources) {

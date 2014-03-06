@@ -1,6 +1,7 @@
 var Cores = require('cores');
 var Middleware = require('./lib/middleware');
 var createRoutes = require('./lib/create-routes.js');
+var Common = require('./lib/common.js');
 
 
 //
@@ -13,12 +14,25 @@ module.exports.register = function(plugin, options, next) {
     selection = plugin.select(options.selection);
   }
 
-  var cores = Cores(options.db);
-
-  if (!options.resourcesDir) {
-    return next(new Error('No resources directory specified'));
+  if (!options.dbUrl) {
+    return next(new Error('No database url specified'));
   }
-  cores.load(options.resourcesDir, options.syncDesign).then(function(resources) {
+  if (!options.resourceDir) {
+    return next(new Error('No resource directory specified'));
+  }
+
+  Common.debug = options.debug;
+
+  var cores;
+
+  Cores(options.dbUrl).then(function(c) {
+    cores = c;
+    return cores.load(options.resourceDir, options.context, options.syncDesign);
+
+  }).then(function(resources) {
+    Object.keys(resources).forEach(function(name) {
+      plugin.log(['cores-hapi'], 'loaded resource ' + name);
+    });
 
     plugin.expose('cores', cores);
 
@@ -47,7 +61,8 @@ module.exports.register = function(plugin, options, next) {
         next(e);
       }
     }
-  }, function(err) {
+
+  }).fail(function(err) {
     next(err);
   });
 };

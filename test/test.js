@@ -47,8 +47,8 @@ describe('cores-hapi', function() {
     }
 
     server.pack.require('../', {
-      db: 'http://localhost:5984/' + dbName,
-      resourcesDir: __dirname,
+      dbUrl: 'http://localhost:5984/' + dbName,
+      resourceDir: __dirname,
       syncDesign: true,
       api: apiOptions
 

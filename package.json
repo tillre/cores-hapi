@@ -29,7 +29,7 @@
     "i": "~0.3.1",
     "hapi": "~2.x.x",
     "kew": "~0.3.x",
-    "cores": "~0.6.x"
+    "cores": "~0.7.x"
   },
   "devDependencies": {
     "nano": "3.x.x",

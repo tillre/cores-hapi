@@ -35,7 +35,7 @@ describe('cores-hapi', function() {
   var startServer = function(apiOptions, callback) {
     server = new hapi.Server('127.0.0.1', 3333);
 
-    if (apiOptions.auth) {
+    if (apiOptions && apiOptions.auth) {
       server.auth.scheme('basic', function(server, options) {
         return {
           authenticate: function(request, reply) {
@@ -47,19 +47,23 @@ describe('cores-hapi', function() {
     }
 
     server.pack.require('../', {
-      dbUrl: 'http://localhost:5984/' + dbName,
-      resourceDir: __dirname,
-      syncDesign: true,
-      api: apiOptions
+      dbUrl: 'http://localhost:5984/' + dbName
 
     }, function(err) {
       if (err) return callback(err);
 
-      cores = server.pack.plugins['cores-hapi'].cores;
+      var coresHapi = server.pack.plugins['cores-hapi'];
+      cores = coresHapi.cores;
+      cores.load(__dirname, null, true).then(function() {
 
-      server.start(function(err) {
-        callback(err, server);
-      });
+        if (apiOptions) {
+          coresHapi.createApi(apiOptions);
+        }
+        server.start(function(err) {
+          callback(err, server);
+        });
+
+      }, callback);
     });
   };
 
@@ -203,7 +207,7 @@ describe('cores-hapi', function() {
     };
 
     before(function(done) {
-      startServer({}, function(err, server) {
+      startServer(true, function(err, server) {
         if (err) return done(err);
         server.plugins['cores-hapi'].pre.create('Image', imageHandler);
         server.plugins['cores-hapi'].pre.update('Image', imageHandler);
@@ -536,7 +540,7 @@ describe('cores-hapi', function() {
     var postAnyHandlerCalls = {};
 
     before(function(done) {
-      startServer({}, function(err, server) {
+      startServer(true, function(err, server) {
         var pre = server.plugins['cores-hapi'].pre;
         var post = server.plugins['cores-hapi'].post;
 

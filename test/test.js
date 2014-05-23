@@ -1,20 +1,22 @@
 /*global before after beforeEach afterEach describe it*/
 
-var fs = require('fs');
+var Fs = require('fs');
 var assert = require('assert');
-var util = require('util');
+var Util = require('util');
 
-var hapi = require('hapi');
-var nano = require('nano')('http://localhost:5984');
-var request = require('request');
+var Hapi = require('hapi');
+var Request = require('request');
 var Q = require('kew');
-var coresHapi = require('../index.js');
+var Cores = require('cores');
 var Middleware = require('../lib/middleware.js');
 var Common = require('../lib/common.js');
 
+
+
+var dbUrl = 'http://localhost:5984/test-cores-hapi';
+
 var articleData = require('./article-data.js');
 var imageData = require('./image-data.js');
-
 
 var articlesRoute = '/articles';
 var schemaRoute = '/articles/_schema';
@@ -29,17 +31,16 @@ function clone(obj) {
 
 describe('cores-hapi', function() {
 
-  var dbName = 'test-cores-hapi';
   var cores, server;
 
   var startServer = function(apiOptions, callback) {
-    server = new hapi.Server('127.0.0.1', 3333);
+    server = new Hapi.Server('127.0.0.1', 3333);
 
     if (apiOptions && apiOptions.auth) {
       server.auth.scheme('basic', function(server, options) {
         return {
           authenticate: function(request, reply) {
-            reply(hapi.error.unauthorized('no way'));
+            reply(Hapi.error.unauthorized('no way'));
           }
         };
       });
@@ -47,7 +48,7 @@ describe('cores-hapi', function() {
     }
 
     server.pack.require('../', {
-      dbUrl: 'http://localhost:5984/' + dbName
+      dbUrl: dbUrl
 
     }, function(err) {
       if (err) return callback(err);
@@ -72,28 +73,24 @@ describe('cores-hapi', function() {
     server.stop(done);
   };
 
+  var couchdb = Cores(dbUrl).couchdb;
 
   before(function(done) {
-    // setup test db
-    nano.db.get(dbName, function(err, body) {
-      if (!err) {
-        // db exists, recreate
-        nano.db.destroy(dbName, function(err) {
-          if (err) done(err);
-          nano.db.create(dbName, done);
-        });
-      }
-      else if (err.reason === 'no_db_file'){
-        // create the db
-        nano.db.create(dbName, done);
-      }
-      else done(err);
-    });
+    couchdb.info().then(function() {
+      return couchdb.destroyDB().then(function() {
+        return couchdb.createDB();
+      });
+    }, function(err) {
+      return couchdb.createDB();
+
+    }).then(function() {
+      done();
+    }, done);
   });
 
 
   after(function(done) {
-    nano.db.destroy(dbName, done);
+    couchdb.destroyDB().then(function() { done(); }, done);
   });
 
 
@@ -182,7 +179,7 @@ describe('cores-hapi', function() {
       m.handle('load', { name: 'Foo' }, {}, {}).then(function() {
         done(new Error('Promise should fail'));
       }, function(err) {
-        assert(util.isError(err));
+        assert(Util.isError(err));
         done();
       });
     });
@@ -307,7 +304,7 @@ describe('cores-hapi', function() {
         { method: 'POST', url: articlesRoute, payload: JSON.stringify({title:42}) },
         function(res) {
           assert(res.statusCode === 400);
-          assert(util.isArray(res.result.errors));
+          assert(Util.isArray(res.result.errors));
           done();
         }
       );
@@ -315,9 +312,9 @@ describe('cores-hapi', function() {
 
 
     it('should POST multipart', function(done) {
-      var file = fs.createReadStream(__dirname + '/test.jpg');
+      var file = Fs.createReadStream(__dirname + '/test.jpg');
 
-      var r = request.post('http://localhost:3333/images', function(err, res) {
+      var r = Request.post('http://localhost:3333/images', function(err, res) {
         assert(!err);
         assert(res.statusCode === 200);
 
@@ -470,7 +467,7 @@ describe('cores-hapi', function() {
         { method: 'PUT', url: articlesRoute + '/' + docId + '/' + docRev, payload: JSON.stringify({title:42}) },
         function(res) {
           assert(res.statusCode === 400);
-          assert(util.isArray(res.result.errors));
+          assert(Util.isArray(res.result.errors));
           done();
         }
       );
@@ -478,9 +475,9 @@ describe('cores-hapi', function() {
 
 
     it('should PUT multipart', function(done) {
-      var file = fs.createReadStream(__dirname + '/test.jpg');
+      var file = Fs.createReadStream(__dirname + '/test.jpg');
 
-      var r = request.put('http://localhost:3333/images/' + docId + '/' + docRev, function(err, res) {
+      var r = Request.put('http://localhost:3333/images/' + docId + '/' + docRev, function(err, res) {
         assert(!err);
         assert(res.statusCode === 200);
 
@@ -522,7 +519,7 @@ describe('cores-hapi', function() {
       server.inject(
         { method: 'DELETE', url: articlesRoute + '/' + docId + '/' + docRev},
         function(res) {
-          assert(res.statusCode === 400);
+          assert(res.statusCode === 404);
           done();
         }
       );
@@ -696,7 +693,7 @@ describe('cores-hapi', function() {
 
     routes.forEach(function(route) {
       it('should not ' + route.name, function(done) {
-        var r = request[route.method](route.url, function(err, res) {
+        var r = Request[route.method](route.url, function(err, res) {
           assert(!err);
           assert(res.statusCode === 401);
           done();
@@ -715,7 +712,7 @@ describe('cores-hapi', function() {
     after(stopServer);
 
     it('should get index', function(done) {
-      var r = request.get('http://localhost:3333/foo/_index', function(err, res) {
+      var r = Request.get('http://localhost:3333/foo/_index', function(err, res) {
         assert(!err);
         assert(res.statusCode === 200);
         done();
@@ -739,7 +736,7 @@ describe('cores-hapi', function() {
     after(stopServer);
 
     it('should get index without auth and under different route', function(done) {
-      var r = request.get('http://localhost:3333/_changedindex', function(err, res) {
+      var r = Request.get('http://localhost:3333/_changedindex', function(err, res) {
         assert(res.statusCode === 200);
         done();
       });

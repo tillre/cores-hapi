@@ -7,13 +7,13 @@ var createApi = require('./lib/create-api.js');
 //
 module.exports.register = function(plugin, options, next) {
 
-  if (!options.dbUrl) {
-    return next(new Error('No database url specified'));
+  if (!options.db) {
+    return next(new Error('No database info specified'));
   }
 
   Common.debug = options.debug;
 
-  var cores = Cores(options.dbUrl);
+  var cores = Cores(options.db);
 
   // make sure db is there
   cores.info().then(function(info) {

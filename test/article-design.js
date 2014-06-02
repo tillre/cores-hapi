@@ -9,5 +9,12 @@ module.exports = {
         }
       }
     }
+  },
+  indexes: {
+    titles: {
+      index: function(doc) {
+        index('default', doc.title);
+      }
+    }
   }
 };

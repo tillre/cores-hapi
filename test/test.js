@@ -48,7 +48,7 @@ describe('cores-hapi', function() {
     }
 
     server.pack.require('../', {
-      dbUrl: dbUrl
+      db: dbUrl
 
     }, function(err) {
       if (err) return callback(err);
@@ -56,10 +56,15 @@ describe('cores-hapi', function() {
       var coresHapi = server.pack.plugins['cores-hapi'];
       cores = coresHapi.cores;
       cores.load(__dirname, null, true).then(function() {
-
         if (apiOptions) {
-          coresHapi.createApi(apiOptions);
+          try {
+            coresHapi.createApi(apiOptions);
+          }
+          catch(e) {
+            callback(e);
+          }
         }
+
         server.start(function(err) {
           callback(err, server);
         });
@@ -82,7 +87,6 @@ describe('cores-hapi', function() {
       });
     }, function(err) {
       return couchdb.createDB();
-
     }).then(function() {
       done();
     }, done);
@@ -225,6 +229,8 @@ describe('cores-hapi', function() {
           assert(typeof res.result.Article.path === 'string');
           assert(typeof res.result.Article.viewPaths === 'object');
           assert(typeof res.result.Article.viewPaths.all === 'string');
+          assert(typeof res.result.Article.searchPaths === 'object');
+          assert(typeof res.result.Article.searchPaths.titles === 'string');
           assert(typeof res.result.Article.schemaPath === 'string');
           assert(typeof res.result.Image === 'object');
           done();
@@ -657,6 +663,7 @@ describe('cores-hapi', function() {
 
     it('should have called the all pre/post handler', function() {
       Object.keys(Common.ACTIONS).forEach(function(action) {
+        if (action === 'search') return;
         if (action === 'schema') return;
         assert(preAnyHandlerCalls[action]);
         assert(postAnyHandlerCalls[action]);

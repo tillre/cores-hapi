@@ -48,7 +48,7 @@ describe('cores-hapi', function() {
     }
 
     server.pack.require('../', {
-      db: dbUrl
+      cores: Cores(dbUrl)
 
     }, function(err) {
       if (err) return callback(err);
@@ -188,7 +188,6 @@ describe('cores-hapi', function() {
       });
     });
   });
-
 
 
   describe('api', function() {
@@ -718,7 +717,7 @@ describe('cores-hapi', function() {
 
     after(stopServer);
 
-    it('should get index', function(done) {
+    it('should get the index', function(done) {
       var r = Request.get('http://localhost:3333/foo/_index', function(err, res) {
         assert(!err);
         assert(res.statusCode === 200);

@@ -1,10 +1,7 @@
 var Common = require('./lib/common.js');
 var createApi = require('./lib/create-api.js');
 
-//
-// hapi plugin
-//
-module.exports.register = function(plugin, options, next) {
+exports.register = function(plugin, options, next) {
 
   if (!options.cores) {
     return next(new Error('Cores option is missing'));
@@ -31,4 +28,9 @@ module.exports.register = function(plugin, options, next) {
   }).fail(function(err) {
     next(err);
   });
+};
+
+
+exports.register.attributes = {
+  pkg: require('./package.json')
 };

@@ -47,9 +47,9 @@ describe('cores-hapi', function() {
       server.auth.strategy('basic', 'basic', true);
     }
 
-    server.pack.require('../', {
-      cores: Cores(dbUrl)
-
+    server.pack.register({
+      plugin: require('../index.js'),
+      options: { cores: Cores(dbUrl) }
     }, function(err) {
       if (err) return callback(err);
 
